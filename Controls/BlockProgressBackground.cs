@@ -282,36 +282,11 @@ public class BlockProgressBackground : Control
                 double horizontalRatio = (x + cell * 0.5) / bounds.Width;
                 var baseColor = GetPaletteGradientColor(currentPalette, horizontalRatio);
 
-                if (IsConnecting)
+                if (cellIndex < filledCount)
                 {
-                    // Smooth traveling scanning light wave in connecting mode
-                    double dist = Math.Abs(c - scanCenter);
-                    double waveGlow = Math.Max(0.0, 1.0 - (dist / 4.0)); // 4-column wide smooth light band
-
-                    if (waveGlow > 0.02)
-                    {
-                        // Smoothly illuminated cell within the traveling light wave
-                        byte waveFillAlpha = (byte)Math.Clamp(14 + (waveGlow * 40), 14, 55);
-                        byte waveBorderAlpha = (byte)Math.Clamp(52 + (waveGlow * 120), 52, 175);
-
-                        var waveFill = new SolidColorBrush(Color.FromArgb(waveFillAlpha, baseColor.R, baseColor.G, baseColor.B));
-                        var wavePen = new Pen(new SolidColorBrush(Color.FromArgb(waveBorderAlpha, baseColor.R, baseColor.G, baseColor.B)), 1.0);
-
-                        context.DrawRectangle(waveFill, wavePen, rrect);
-                        context.DrawLine(glassHighlightPen, new Point(x + radius, y + 0.8), new Point(x + cell - radius, y + 0.8));
-                    }
-                    else
-                    {
-                        // Standard visible unfilled frosted glass cell
-                        context.DrawRectangle(emptyFillBrush, emptyPen, rrect);
-                        context.DrawLine(glassHighlightPen, new Point(x + radius, y + 0.8), new Point(x + cell - radius, y + 0.8));
-                    }
-                }
-                else if (cellIndex < filledCount)
-                {
-                    // Fully filled glass cell with horizontal liquid gradient
+                    // Fully filled glass cell with horizontal liquid gradient (preserved steadily on resume)
                     double pulseAlpha = 1.0;
-                    if (IsActive)
+                    if (IsActive && !IsConnecting)
                     {
                         double wave = Math.Sin(_animPhase + (c * 0.22) - (r * 0.12));
                         pulseAlpha = 0.88 + (wave * 0.22);
@@ -341,9 +316,36 @@ public class BlockProgressBackground : Control
                 }
                 else
                 {
-                    // Unfilled visible frosted glass cell (clearly visible backing & border)
-                    context.DrawRectangle(emptyFillBrush, emptyPen, rrect);
-                    context.DrawLine(glassHighlightPen, new Point(x + radius, y + 0.8), new Point(x + cell - radius, y + 0.8));
+                    // Unfilled cell region
+                    if (IsConnecting)
+                    {
+                        // Traveling light sweep wave across the unfilled remaining cells
+                        double dist = Math.Abs(c - scanCenter);
+                        double waveGlow = Math.Max(0.0, 1.0 - (dist / 4.0)); // 4-column wide smooth light band
+
+                        if (waveGlow > 0.02)
+                        {
+                            byte waveFillAlpha = (byte)Math.Clamp(14 + (waveGlow * 40), 14, 55);
+                            byte waveBorderAlpha = (byte)Math.Clamp(52 + (waveGlow * 120), 52, 175);
+
+                            var waveFill = new SolidColorBrush(Color.FromArgb(waveFillAlpha, baseColor.R, baseColor.G, baseColor.B));
+                            var wavePen = new Pen(new SolidColorBrush(Color.FromArgb(waveBorderAlpha, baseColor.R, baseColor.G, baseColor.B)), 1.0);
+
+                            context.DrawRectangle(waveFill, wavePen, rrect);
+                            context.DrawLine(glassHighlightPen, new Point(x + radius, y + 0.8), new Point(x + cell - radius, y + 0.8));
+                        }
+                        else
+                        {
+                            context.DrawRectangle(emptyFillBrush, emptyPen, rrect);
+                            context.DrawLine(glassHighlightPen, new Point(x + radius, y + 0.8), new Point(x + cell - radius, y + 0.8));
+                        }
+                    }
+                    else
+                    {
+                        // Standard clearly visible frosted glass cell
+                        context.DrawRectangle(emptyFillBrush, emptyPen, rrect);
+                        context.DrawLine(glassHighlightPen, new Point(x + radius, y + 0.8), new Point(x + cell - radius, y + 0.8));
+                    }
                 }
 
                 cellIndex++;
