@@ -37,7 +37,6 @@ public class BlockProgressBackground : Control
 
     private double _animatedProgress = 0.0;
     private bool _isInitialized = false;
-    private double _animPhase = 0.0;
     private readonly DispatcherTimer _animTimer;
 
     // 10 distinct, vibrant gradient palettes
@@ -189,8 +188,6 @@ public class BlockProgressBackground : Control
 
     private void OnAnimationTick(object? sender, EventArgs e)
     {
-        bool needsRedraw = false;
-
         // Smooth continuous progress interpolation without resetting
         double target = Math.Clamp(Progress, 0.0, 100.0);
         double diff = target - _animatedProgress;
@@ -198,26 +195,14 @@ public class BlockProgressBackground : Control
         if (Math.Abs(diff) > 0.05)
         {
             _animatedProgress += diff * 0.22;
-            needsRedraw = true;
+            InvalidateVisual();
         }
         else if (_animatedProgress != target)
         {
             _animatedProgress = target;
-            needsRedraw = true;
-        }
-
-        // Active download traveling shimmer / gentle connecting pulse
-        if (IsActive || IsConnecting)
-        {
-            _animPhase = (_animPhase + 0.05) % (Math.PI * 2.0);
-            needsRedraw = true;
-        }
-
-        if (needsRedraw)
-        {
             InvalidateVisual();
         }
-        else if (!IsActive && !IsConnecting && Math.Abs(_animatedProgress - target) <= 0.05)
+        else
         {
             _animTimer.Stop();
         }
@@ -254,19 +239,10 @@ public class BlockProgressBackground : Control
         int palIdx = Math.Abs(PaletteIndex) % Palettes.Length;
         var currentPalette = Palettes[palIdx];
 
-        // Unfilled cell styling: distinct, clearly visible frosted glass tile
-        var emptyFillBrush = new SolidColorBrush(Color.FromArgb(14, 255, 255, 255));
-        var emptyPen = new Pen(new SolidColorBrush(Color.FromArgb(52, 255, 255, 255)), 1.0);
-        var glassHighlightPen = new Pen(new SolidColorBrush(Color.FromArgb(45, 255, 255, 255)), 0.8);
-
-        // Connecting mode: smooth traveling luminous light sweep wave from left to right
-        double scanCenter = 0.0;
-        if (IsConnecting)
-        {
-            // Continuous smooth sweep across card width (loops smoothly)
-            double tNorm = (_animPhase / (Math.PI * 2.0));
-            scanCenter = tNorm * (cols + 8) - 4;
-        }
+        // High-contrast, clean unfilled cell styling
+        var emptyFillBrush = new SolidColorBrush(Color.FromArgb(20, 255, 255, 255));
+        var emptyBorderPen = new Pen(new SolidColorBrush(Color.FromArgb(70, 255, 255, 255)), 1.0);
+        var glassHighlightPen = new Pen(new SolidColorBrush(Color.FromArgb(50, 255, 255, 255)), 0.8);
 
         int cellIndex = 0;
         for (int r = 0; r < rows; r++)
@@ -284,30 +260,18 @@ public class BlockProgressBackground : Control
 
                 if (cellIndex < filledCount)
                 {
-                    // Fully filled glass cell with horizontal liquid gradient (preserved steadily on resume)
-                    double pulseAlpha = 1.0;
-                    if (IsActive && !IsConnecting)
-                    {
-                        double wave = Math.Sin(_animPhase + (c * 0.22) - (r * 0.12));
-                        pulseAlpha = 0.88 + (wave * 0.22);
-                    }
-
-                    byte fillAlpha = (byte)Math.Clamp(36 * pulseAlpha, 20, 58);
-                    byte borderAlpha = (byte)Math.Clamp(85 * pulseAlpha, 50, 130);
-
-                    var fillBrush = new SolidColorBrush(Color.FromArgb(fillAlpha, baseColor.R, baseColor.G, baseColor.B));
-                    var borderPen = new Pen(new SolidColorBrush(Color.FromArgb(borderAlpha, baseColor.R, baseColor.G, baseColor.B)), 1.0);
+                    // Fully filled glass cell with horizontal liquid gradient
+                    var fillBrush = new SolidColorBrush(Color.FromArgb(48, baseColor.R, baseColor.G, baseColor.B));
+                    var borderPen = new Pen(new SolidColorBrush(Color.FromArgb(120, baseColor.R, baseColor.G, baseColor.B)), 1.0);
 
                     context.DrawRectangle(fillBrush, borderPen, rrect);
-
-                    // Top glass specular sheen line
                     context.DrawLine(glassHighlightPen, new Point(x + radius, y + 0.8), new Point(x + cell - radius, y + 0.8));
                 }
                 else if (cellIndex == filledCount && fractionalCell > 0.05)
                 {
                     // Smoothly transitioning boundary cell
-                    byte fillAlpha = (byte)Math.Clamp(36 * fractionalCell, 10, 50);
-                    byte borderAlpha = (byte)Math.Clamp(80 * fractionalCell, 30, 110);
+                    byte fillAlpha = (byte)Math.Clamp(48 * fractionalCell, 12, 48);
+                    byte borderAlpha = (byte)Math.Clamp(120 * fractionalCell, 30, 120);
 
                     var fillBrush = new SolidColorBrush(Color.FromArgb(fillAlpha, baseColor.R, baseColor.G, baseColor.B));
                     var borderPen = new Pen(new SolidColorBrush(Color.FromArgb(borderAlpha, baseColor.R, baseColor.G, baseColor.B)), 1.0);
@@ -316,36 +280,9 @@ public class BlockProgressBackground : Control
                 }
                 else
                 {
-                    // Unfilled cell region
-                    if (IsConnecting)
-                    {
-                        // Traveling light sweep wave across the unfilled remaining cells
-                        double dist = Math.Abs(c - scanCenter);
-                        double waveGlow = Math.Max(0.0, 1.0 - (dist / 4.0)); // 4-column wide smooth light band
-
-                        if (waveGlow > 0.02)
-                        {
-                            byte waveFillAlpha = (byte)Math.Clamp(14 + (waveGlow * 40), 14, 55);
-                            byte waveBorderAlpha = (byte)Math.Clamp(52 + (waveGlow * 120), 52, 175);
-
-                            var waveFill = new SolidColorBrush(Color.FromArgb(waveFillAlpha, baseColor.R, baseColor.G, baseColor.B));
-                            var wavePen = new Pen(new SolidColorBrush(Color.FromArgb(waveBorderAlpha, baseColor.R, baseColor.G, baseColor.B)), 1.0);
-
-                            context.DrawRectangle(waveFill, wavePen, rrect);
-                            context.DrawLine(glassHighlightPen, new Point(x + radius, y + 0.8), new Point(x + cell - radius, y + 0.8));
-                        }
-                        else
-                        {
-                            context.DrawRectangle(emptyFillBrush, emptyPen, rrect);
-                            context.DrawLine(glassHighlightPen, new Point(x + radius, y + 0.8), new Point(x + cell - radius, y + 0.8));
-                        }
-                    }
-                    else
-                    {
-                        // Standard clearly visible frosted glass cell
-                        context.DrawRectangle(emptyFillBrush, emptyPen, rrect);
-                        context.DrawLine(glassHighlightPen, new Point(x + radius, y + 0.8), new Point(x + cell - radius, y + 0.8));
-                    }
+                    // Unfilled visible glass grid cell (clean, distinct & subtle)
+                    context.DrawRectangle(emptyFillBrush, emptyBorderPen, rrect);
+                    context.DrawLine(glassHighlightPen, new Point(x + radius, y + 0.8), new Point(x + cell - radius, y + 0.8));
                 }
 
                 cellIndex++;
