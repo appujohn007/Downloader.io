@@ -254,15 +254,19 @@ public class BlockProgressBackground : Control
         int palIdx = Math.Abs(PaletteIndex) % Palettes.Length;
         var currentPalette = Palettes[palIdx];
 
-        // Connecting mode gentle breathing pulse
-        byte emptyBorderAlpha = 34;
+        // Unfilled cell styling: distinct, clearly visible frosted glass tile
+        var emptyFillBrush = new SolidColorBrush(Color.FromArgb(14, 255, 255, 255));
+        var emptyPen = new Pen(new SolidColorBrush(Color.FromArgb(52, 255, 255, 255)), 1.0);
+        var glassHighlightPen = new Pen(new SolidColorBrush(Color.FromArgb(45, 255, 255, 255)), 0.8);
+
+        // Connecting mode: smooth traveling luminous light sweep wave from left to right
+        double scanCenter = 0.0;
         if (IsConnecting)
         {
-            emptyBorderAlpha = (byte)Math.Clamp(34 + 20 * Math.Sin(_animPhase), 20, 60);
+            // Continuous smooth sweep across card width (loops smoothly)
+            double tNorm = (_animPhase / (Math.PI * 2.0));
+            scanCenter = tNorm * (cols + 8) - 4;
         }
-
-        var emptyPen = new Pen(new SolidColorBrush(Color.FromArgb(emptyBorderAlpha, 255, 255, 255)), 0.85);
-        var glassHighlightPen = new Pen(new SolidColorBrush(Color.FromArgb(36, 255, 255, 255)), 0.7);
 
         int cellIndex = 0;
         for (int r = 0; r < rows; r++)
@@ -278,7 +282,32 @@ public class BlockProgressBackground : Control
                 double horizontalRatio = (x + cell * 0.5) / bounds.Width;
                 var baseColor = GetPaletteGradientColor(currentPalette, horizontalRatio);
 
-                if (!IsConnecting && cellIndex < filledCount)
+                if (IsConnecting)
+                {
+                    // Smooth traveling scanning light wave in connecting mode
+                    double dist = Math.Abs(c - scanCenter);
+                    double waveGlow = Math.Max(0.0, 1.0 - (dist / 4.0)); // 4-column wide smooth light band
+
+                    if (waveGlow > 0.02)
+                    {
+                        // Smoothly illuminated cell within the traveling light wave
+                        byte waveFillAlpha = (byte)Math.Clamp(14 + (waveGlow * 40), 14, 55);
+                        byte waveBorderAlpha = (byte)Math.Clamp(52 + (waveGlow * 120), 52, 175);
+
+                        var waveFill = new SolidColorBrush(Color.FromArgb(waveFillAlpha, baseColor.R, baseColor.G, baseColor.B));
+                        var wavePen = new Pen(new SolidColorBrush(Color.FromArgb(waveBorderAlpha, baseColor.R, baseColor.G, baseColor.B)), 1.0);
+
+                        context.DrawRectangle(waveFill, wavePen, rrect);
+                        context.DrawLine(glassHighlightPen, new Point(x + radius, y + 0.8), new Point(x + cell - radius, y + 0.8));
+                    }
+                    else
+                    {
+                        // Standard visible unfilled frosted glass cell
+                        context.DrawRectangle(emptyFillBrush, emptyPen, rrect);
+                        context.DrawLine(glassHighlightPen, new Point(x + radius, y + 0.8), new Point(x + cell - radius, y + 0.8));
+                    }
+                }
+                else if (cellIndex < filledCount)
                 {
                     // Fully filled glass cell with horizontal liquid gradient
                     double pulseAlpha = 1.0;
@@ -288,32 +317,33 @@ public class BlockProgressBackground : Control
                         pulseAlpha = 0.88 + (wave * 0.22);
                     }
 
-                    byte fillAlpha = (byte)Math.Clamp(34 * pulseAlpha, 18, 55);
-                    byte borderAlpha = (byte)Math.Clamp(75 * pulseAlpha, 40, 110);
+                    byte fillAlpha = (byte)Math.Clamp(36 * pulseAlpha, 20, 58);
+                    byte borderAlpha = (byte)Math.Clamp(85 * pulseAlpha, 50, 130);
 
                     var fillBrush = new SolidColorBrush(Color.FromArgb(fillAlpha, baseColor.R, baseColor.G, baseColor.B));
-                    var borderPen = new Pen(new SolidColorBrush(Color.FromArgb(borderAlpha, baseColor.R, baseColor.G, baseColor.B)), 0.85);
+                    var borderPen = new Pen(new SolidColorBrush(Color.FromArgb(borderAlpha, baseColor.R, baseColor.G, baseColor.B)), 1.0);
 
                     context.DrawRectangle(fillBrush, borderPen, rrect);
 
                     // Top glass specular sheen line
                     context.DrawLine(glassHighlightPen, new Point(x + radius, y + 0.8), new Point(x + cell - radius, y + 0.8));
                 }
-                else if (!IsConnecting && cellIndex == filledCount && fractionalCell > 0.05)
+                else if (cellIndex == filledCount && fractionalCell > 0.05)
                 {
                     // Smoothly transitioning boundary cell
-                    byte fillAlpha = (byte)Math.Clamp(34 * fractionalCell, 6, 45);
-                    byte borderAlpha = (byte)Math.Clamp(70 * fractionalCell, 20, 85);
+                    byte fillAlpha = (byte)Math.Clamp(36 * fractionalCell, 10, 50);
+                    byte borderAlpha = (byte)Math.Clamp(80 * fractionalCell, 30, 110);
 
                     var fillBrush = new SolidColorBrush(Color.FromArgb(fillAlpha, baseColor.R, baseColor.G, baseColor.B));
-                    var borderPen = new Pen(new SolidColorBrush(Color.FromArgb(borderAlpha, baseColor.R, baseColor.G, baseColor.B)), 0.85);
+                    var borderPen = new Pen(new SolidColorBrush(Color.FromArgb(borderAlpha, baseColor.R, baseColor.G, baseColor.B)), 1.0);
 
                     context.DrawRectangle(fillBrush, borderPen, rrect);
                 }
                 else
                 {
-                    // Unfilled visible frosted glass cell (border only)
-                    context.DrawRectangle(null, emptyPen, rrect);
+                    // Unfilled visible frosted glass cell (clearly visible backing & border)
+                    context.DrawRectangle(emptyFillBrush, emptyPen, rrect);
+                    context.DrawLine(glassHighlightPen, new Point(x + radius, y + 0.8), new Point(x + cell - radius, y + 0.8));
                 }
 
                 cellIndex++;
