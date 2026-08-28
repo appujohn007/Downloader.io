@@ -206,15 +206,11 @@
                                             Padding="14,10"
                                             ClipToBounds="True">
                                         <Grid>
-                                            <!-- Dynamic Matrix Block Tile Progress Grid Background -->
+                                            <!-- Dynamic Matrix Block Tile Progress Grid Background with Glassmorphic Horizontal Gradient -->
                                             <controls:BlockProgressBackground
                                                 Progress="{Binding ProgressPercentage}"
                                                 IsActive="{Binding IsActive}"
                                                 IsCompleted="{Binding IsCompleted}"
-                                                EmptyBorderBrush="{DynamicResource TileGridEmptyBorderBrush}"
-                                                FilledBrush="{DynamicResource TileGridFilledBrush}"
-                                                FilledBorderBrush="{DynamicResource TileGridFilledBorderBrush}"
-                                                ActiveHeadBrush="{DynamicResource TileGridActiveHeadBrush}"
                                                 HorizontalAlignment="Stretch"
                                                 VerticalAlignment="Stretch"
                                                 Margin="-14,-10"
