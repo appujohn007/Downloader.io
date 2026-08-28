@@ -14,8 +14,14 @@ public class BlockProgressBackground : Control
     public static readonly StyledProperty<bool> IsActiveProperty =
         AvaloniaProperty.Register<BlockProgressBackground, bool>(nameof(IsActive), false);
 
+    public static readonly StyledProperty<bool> IsConnectingProperty =
+        AvaloniaProperty.Register<BlockProgressBackground, bool>(nameof(IsConnecting), false);
+
     public static readonly StyledProperty<bool> IsCompletedProperty =
         AvaloniaProperty.Register<BlockProgressBackground, bool>(nameof(IsCompleted), false);
+
+    public static readonly StyledProperty<string?> PaletteSeedProperty =
+        AvaloniaProperty.Register<BlockProgressBackground, string?>(nameof(PaletteSeed));
 
     public static readonly StyledProperty<double> CellSizeProperty =
         AvaloniaProperty.Register<BlockProgressBackground, double>(nameof(CellSize), 8.0);
@@ -30,8 +36,27 @@ public class BlockProgressBackground : Control
         AvaloniaProperty.Register<BlockProgressBackground, bool>(nameof(IsDarkMode), true);
 
     private double _animatedProgress = 0.0;
+    private bool _isInitialized = false;
     private double _shimmerPhase = 0.0;
+    private double _windPhase = 0.0;
     private readonly DispatcherTimer _animTimer;
+
+    // 6 distinct, vibrant gradient palettes
+    private static readonly (Color Stop0, Color Stop1, Color Stop2)[] Palettes = new[]
+    {
+        // 0: Cyber Cyan -> Azure -> Indigo
+        (Color.FromRgb(6, 182, 212), Color.FromRgb(59, 130, 246), Color.FromRgb(99, 102, 241)),
+        // 1: Neon Emerald -> Mint -> Cyan
+        (Color.FromRgb(16, 185, 129), Color.FromRgb(20, 184, 166), Color.FromRgb(6, 182, 212)),
+        // 2: Sunset Amber -> Tangerine -> Rose
+        (Color.FromRgb(245, 158, 11), Color.FromRgb(249, 115, 22), Color.FromRgb(244, 63, 94)),
+        // 3: Electric Violet -> Magenta -> Hot Pink
+        (Color.FromRgb(139, 92, 246), Color.FromRgb(217, 70, 239), Color.FromRgb(236, 72, 153)),
+        // 4: Hyper Lime -> Green -> Teal
+        (Color.FromRgb(132, 204, 22), Color.FromRgb(16, 185, 129), Color.FromRgb(6, 182, 212)),
+        // 5: Sapphire Blue -> Sky -> Violet
+        (Color.FromRgb(37, 99, 235), Color.FromRgb(56, 189, 248), Color.FromRgb(139, 92, 246)),
+    };
 
     static BlockProgressBackground()
     {
@@ -39,7 +64,9 @@ public class BlockProgressBackground : Control
             BoundsProperty,
             ProgressProperty,
             IsActiveProperty,
+            IsConnectingProperty,
             IsCompletedProperty,
+            PaletteSeedProperty,
             CellSizeProperty,
             CellGapProperty,
             CellCornerRadiusProperty,
@@ -67,10 +94,22 @@ public class BlockProgressBackground : Control
         set => SetValue(IsActiveProperty, value);
     }
 
+    public bool IsConnecting
+    {
+        get => GetValue(IsConnectingProperty);
+        set => SetValue(IsConnectingProperty, value);
+    }
+
     public bool IsCompleted
     {
         get => GetValue(IsCompletedProperty);
         set => SetValue(IsCompletedProperty, value);
+    }
+
+    public string? PaletteSeed
+    {
+        get => GetValue(PaletteSeedProperty);
+        set => SetValue(PaletteSeedProperty, value);
     }
 
     public double CellSize
@@ -101,7 +140,16 @@ public class BlockProgressBackground : Control
     {
         base.OnPropertyChanged(change);
 
-        if (change.Property == ProgressProperty || change.Property == IsActiveProperty)
+        if (change.Property == ProgressProperty)
+        {
+            if (!_isInitialized)
+            {
+                _animatedProgress = Math.Clamp(Progress, 0.0, 100.0);
+                _isInitialized = true;
+            }
+            EnsureAnimationRunning();
+        }
+        else if (change.Property == IsActiveProperty || change.Property == IsConnectingProperty)
         {
             EnsureAnimationRunning();
         }
@@ -110,6 +158,11 @@ public class BlockProgressBackground : Control
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
     {
         base.OnAttachedToVisualTree(e);
+        if (!_isInitialized)
+        {
+            _animatedProgress = Math.Clamp(Progress, 0.0, 100.0);
+            _isInitialized = true;
+        }
         EnsureAnimationRunning();
     }
 
@@ -131,7 +184,7 @@ public class BlockProgressBackground : Control
     {
         bool needsRedraw = false;
 
-        // Liquid smooth progress interpolation
+        // Smooth progress interpolation without resetting
         double target = Math.Clamp(Progress, 0.0, 100.0);
         double diff = target - _animatedProgress;
 
@@ -146,10 +199,17 @@ public class BlockProgressBackground : Control
             needsRedraw = true;
         }
 
-        // Liquid shimmer wave phase
-        if (IsActive)
+        // Active download traveling shimmer wave
+        if (IsActive && !IsConnecting)
         {
             _shimmerPhase = (_shimmerPhase + 0.06) % (Math.PI * 2.0);
+            needsRedraw = true;
+        }
+
+        // Connecting mode passing wind wave
+        if (IsConnecting)
+        {
+            _windPhase = (_windPhase + 0.08) % (Math.PI * 2.0);
             needsRedraw = true;
         }
 
@@ -157,7 +217,7 @@ public class BlockProgressBackground : Control
         {
             InvalidateVisual();
         }
-        else if (!IsActive && Math.Abs(_animatedProgress - target) <= 0.05)
+        else if (!IsActive && !IsConnecting && Math.Abs(_animatedProgress - target) <= 0.05)
         {
             _animTimer.Stop();
         }
@@ -190,12 +250,19 @@ public class BlockProgressBackground : Control
         int filledCount = (int)Math.Floor(exactFilled);
         double fractionalCell = exactFilled - filledCount;
 
-        // Subtle, refined glassmorphic palette
-        // Empty cells: ultra-subtle 7-10% border sheen
-        var emptyPen = new Pen(new SolidColorBrush(Color.FromArgb(16, 255, 255, 255)), 0.85);
+        // Pick palette based on PaletteSeed hash
+        int paletteIndex = 0;
+        if (!string.IsNullOrEmpty(PaletteSeed))
+        {
+            paletteIndex = Math.Abs(PaletteSeed.GetHashCode()) % Palettes.Length;
+        }
+        var currentPalette = Palettes[paletteIndex];
+
+        // Clear, crisp unfilled cell border (well-visible glass grid matrix)
+        var emptyPen = new Pen(new SolidColorBrush(Color.FromArgb(38, 255, 255, 255)), 0.85);
 
         // Specular highlight brush for glass sheen effect
-        var glassHighlightPen = new Pen(new SolidColorBrush(Color.FromArgb(32, 255, 255, 255)), 0.7);
+        var glassHighlightPen = new Pen(new SolidColorBrush(Color.FromArgb(36, 255, 255, 255)), 0.7);
 
         int cellIndex = 0;
         for (int r = 0; r < rows; r++)
@@ -209,9 +276,28 @@ public class BlockProgressBackground : Control
 
                 // Horizontal gradient position across the full card width
                 double horizontalRatio = (x + cell * 0.5) / bounds.Width;
-                var baseColor = GetLiquidGradientColor(horizontalRatio);
+                var baseColor = GetPaletteGradientColor(currentPalette, horizontalRatio);
 
-                if (cellIndex < filledCount)
+                if (IsConnecting)
+                {
+                    // Luminous wind wave passing across unfilled cells during connecting mode
+                    double waveDist = Math.Sin(_windPhase - (c * 0.22) + (r * 0.08));
+                    if (waveDist > 0)
+                    {
+                        byte windAlpha = (byte)Math.Clamp(waveDist * 40, 0, 40);
+                        byte windBorderAlpha = (byte)Math.Clamp(38 + (waveDist * 80), 38, 120);
+
+                        var windFillBrush = new SolidColorBrush(Color.FromArgb(windAlpha, baseColor.R, baseColor.G, baseColor.B));
+                        var windBorderPen = new Pen(new SolidColorBrush(Color.FromArgb(windBorderAlpha, baseColor.R, baseColor.G, baseColor.B)), 0.9);
+
+                        context.DrawRectangle(windFillBrush, windBorderPen, rrect);
+                    }
+                    else
+                    {
+                        context.DrawRectangle(null, emptyPen, rrect);
+                    }
+                }
+                else if (cellIndex < filledCount)
                 {
                     // Fully filled glass cell with horizontal liquid gradient
                     double pulseAlpha = 1.0;
@@ -223,7 +309,7 @@ public class BlockProgressBackground : Control
                     }
 
                     byte fillAlpha = (byte)Math.Clamp(34 * pulseAlpha, 18, 55);
-                    byte borderAlpha = (byte)Math.Clamp(70 * pulseAlpha, 35, 100);
+                    byte borderAlpha = (byte)Math.Clamp(75 * pulseAlpha, 40, 110);
 
                     var fillBrush = new SolidColorBrush(Color.FromArgb(fillAlpha, baseColor.R, baseColor.G, baseColor.B));
                     var borderPen = new Pen(new SolidColorBrush(Color.FromArgb(borderAlpha, baseColor.R, baseColor.G, baseColor.B)), 0.85);
@@ -237,7 +323,7 @@ public class BlockProgressBackground : Control
                 {
                     // Smoothly transitioning boundary cell
                     byte fillAlpha = (byte)Math.Clamp(34 * fractionalCell, 6, 45);
-                    byte borderAlpha = (byte)Math.Clamp(65 * fractionalCell, 15, 80);
+                    byte borderAlpha = (byte)Math.Clamp(70 * fractionalCell, 20, 85);
 
                     var fillBrush = new SolidColorBrush(Color.FromArgb(fillAlpha, baseColor.R, baseColor.G, baseColor.B));
                     var borderPen = new Pen(new SolidColorBrush(Color.FromArgb(borderAlpha, baseColor.R, baseColor.G, baseColor.B)), 0.85);
@@ -246,7 +332,7 @@ public class BlockProgressBackground : Control
                 }
                 else
                 {
-                    // Unfilled subtle frosted glass cell (border only)
+                    // Unfilled visible frosted glass cell (border only)
                     context.DrawRectangle(null, emptyPen, rrect);
                 }
 
@@ -256,31 +342,26 @@ public class BlockProgressBackground : Control
     }
 
     /// <summary>
-    /// Evaluates sweeping horizontal liquid gradient: Cyan -> Sky Blue -> Vivid Royal -> Indigo/Purple
+    /// Evaluates smooth horizontal 3-stop liquid gradient using selected card palette
     /// </summary>
-    private static Color GetLiquidGradientColor(double t)
+    private static Color GetPaletteGradientColor((Color Stop0, Color Stop1, Color Stop2) pal, double t)
     {
         t = Math.Clamp(t, 0.0, 1.0);
-
-        // Gradient Stops:
-        // Stop 0.0: Electric Cyan (#06B6D4 -> RGB: 6, 182, 212)
-        // Stop 0.5: Vivid Azure Blue (#3B82F6 -> RGB: 59, 130, 246)
-        // Stop 1.0: Indigo Purple (#6366F1 -> RGB: 99, 102, 241)
 
         if (t <= 0.5)
         {
             double k = t / 0.5;
-            byte r = (byte)(6 + (59 - 6) * k);
-            byte g = (byte)(182 + (130 - 182) * k);
-            byte b = (byte)(212 + (246 - 212) * k);
+            byte r = (byte)(pal.Stop0.R + (pal.Stop1.R - pal.Stop0.R) * k);
+            byte g = (byte)(pal.Stop0.G + (pal.Stop1.G - pal.Stop0.G) * k);
+            byte b = (byte)(pal.Stop0.B + (pal.Stop1.B - pal.Stop0.B) * k);
             return Color.FromRgb(r, g, b);
         }
         else
         {
             double k = (t - 0.5) / 0.5;
-            byte r = (byte)(59 + (99 - 59) * k);
-            byte g = (byte)(130 + (102 - 130) * k);
-            byte b = (byte)(246 + (241 - 246) * k);
+            byte r = (byte)(pal.Stop1.R + (pal.Stop2.R - pal.Stop1.R) * k);
+            byte g = (byte)(pal.Stop1.G + (pal.Stop2.G - pal.Stop1.G) * k);
+            byte b = (byte)(pal.Stop1.B + (pal.Stop2.B - pal.Stop1.B) * k);
             return Color.FromRgb(r, g, b);
         }
     }

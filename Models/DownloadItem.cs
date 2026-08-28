@@ -108,6 +108,7 @@ public partial class DownloadItem : ObservableObject
     };
 
     public bool IsActive => Status == DownloadStatus.Downloading || Status == DownloadStatus.Connecting;
+    public bool IsConnecting => Status == DownloadStatus.Connecting;
     public bool CanPause => Status == DownloadStatus.Downloading || Status == DownloadStatus.Connecting;
     public bool CanResume => Status == DownloadStatus.Paused || Status == DownloadStatus.Failed;
     public bool IsCompleted => Status == DownloadStatus.Completed;
@@ -135,6 +136,7 @@ public partial class DownloadItem : ObservableObject
         OnPropertyChanged(nameof(FormattedEta));
         OnPropertyChanged(nameof(StatusDisplayText));
         OnPropertyChanged(nameof(IsActive));
+        OnPropertyChanged(nameof(IsConnecting));
         OnPropertyChanged(nameof(CanPause));
         OnPropertyChanged(nameof(CanResume));
         OnPropertyChanged(nameof(IsCompleted));
