@@ -7,23 +7,25 @@ echo         Downloader.io - Modern Download Manager
 echo ========================================================
 echo.
 
-:: Locate dotnet
-set "DOTNET_CMD=dotnet"
-where dotnet >nul 2>nul
-if %errorlevel% neq 0 (
-    if exist "%LocalAppData%\Microsoft\dotnet\dotnet.exe" (
-        set "DOTNET_CMD=%LocalAppData%\Microsoft\dotnet\dotnet.exe"
+:: Prioritize .NET 8 SDK location in LocalAppData first
+set "DOTNET_CMD="
+if exist "%LocalAppData%\Microsoft\dotnet\dotnet.exe" (
+    set "DOTNET_CMD=%LocalAppData%\Microsoft\dotnet\dotnet.exe"
+) else (
+    where dotnet >nul 2>nul
+    if !errorlevel! equ 0 (
+        set "DOTNET_CMD=dotnet"
     ) else if exist "%ProgramFiles%\dotnet\dotnet.exe" (
         set "DOTNET_CMD=%ProgramFiles%\dotnet\dotnet.exe"
     ) else (
-        echo [ERROR] .NET SDK / Runtime not found.
+        echo [ERROR] .NET SDK not found.
         echo Please ensure .NET 8 SDK is installed.
         pause
         exit /b 1
     )
 )
 
-echo Starting Downloader.io...
+echo Starting Downloader.io with: %DOTNET_CMD%
 echo.
 
 "%DOTNET_CMD%" run --project "%~dp0Downloader.csproj"
