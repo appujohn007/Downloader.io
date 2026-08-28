@@ -206,10 +206,10 @@ public class BlockProgressBackground : Control
             needsRedraw = true;
         }
 
-        // Connecting wave animation phase
+        // Connecting wave animation phase (faster, fluid speed)
         if (IsConnecting)
         {
-            _animPhase = (_animPhase + 0.06) % (Math.PI * 2.0);
+            _animPhase = (_animPhase + 0.12) % (Math.PI * 2.0);
             needsRedraw = true;
         }
 
@@ -264,24 +264,30 @@ public class BlockProgressBackground : Control
         Pen glassHighlightPen;
         byte fillBaseAlpha;
         byte borderBaseAlpha;
+        byte baseUnfilledBorderAlpha;
+        byte baseUnfilledFillAlpha;
 
         if (isLight)
         {
             // Light Mode: subtle, transparent outline
-            emptyFillBrush = new SolidColorBrush(Color.FromArgb(4, 15, 23, 42));
-            emptyBorderPen = new Pen(new SolidColorBrush(Color.FromArgb(16, 15, 23, 42)), 0.85);
-            glassHighlightPen = new Pen(new SolidColorBrush(Color.FromArgb(45, 255, 255, 255)), 0.7);
-            fillBaseAlpha = 26;
-            borderBaseAlpha = 65;
+            baseUnfilledFillAlpha = 4;
+            baseUnfilledBorderAlpha = 16;
+            emptyFillBrush = new SolidColorBrush(Color.FromArgb(baseUnfilledFillAlpha, 15, 23, 42));
+            emptyBorderPen = new Pen(new SolidColorBrush(Color.FromArgb(baseUnfilledBorderAlpha, 15, 23, 42)), 0.85);
+            glassHighlightPen = new Pen(new SolidColorBrush(Color.FromArgb(40, 255, 255, 255)), 0.7);
+            fillBaseAlpha = 24;
+            borderBaseAlpha = 60;
         }
         else
         {
             // Dark Mode: soft, ultra-translucent cyber-glass matrix
-            emptyFillBrush = new SolidColorBrush(Color.FromArgb(4, 255, 255, 255));
-            emptyBorderPen = new Pen(new SolidColorBrush(Color.FromArgb(18, 255, 255, 255)), 0.85);
-            glassHighlightPen = new Pen(new SolidColorBrush(Color.FromArgb(24, 255, 255, 255)), 0.7);
-            fillBaseAlpha = 30;
-            borderBaseAlpha = 72;
+            baseUnfilledFillAlpha = 4;
+            baseUnfilledBorderAlpha = 18;
+            emptyFillBrush = new SolidColorBrush(Color.FromArgb(baseUnfilledFillAlpha, 255, 255, 255));
+            emptyBorderPen = new Pen(new SolidColorBrush(Color.FromArgb(baseUnfilledBorderAlpha, 255, 255, 255)), 0.85);
+            glassHighlightPen = new Pen(new SolidColorBrush(Color.FromArgb(22, 255, 255, 255)), 0.7);
+            fillBaseAlpha = 28;
+            borderBaseAlpha = 68;
         }
 
         int cellIndex = 0;
@@ -322,12 +328,12 @@ public class BlockProgressBackground : Control
                     // Unfilled cell
                     if (IsConnecting)
                     {
-                        // Gentle traveling light wave across unfilled cells during connecting mode
-                        double wave = Math.Sin(_animPhase - (c * 0.18));
+                        // Faster, ultra-light and transparent gentle wave across unfilled cells during connecting mode
+                        double wave = Math.Sin(_animPhase - (c * 0.14));
                         double waveFactor = Math.Clamp(0.5 + (wave * 0.5), 0.0, 1.0);
 
-                        byte waveFillAlpha = (byte)Math.Clamp(4 + (waveFactor * 18), 4, 24);
-                        byte waveBorderAlpha = (byte)Math.Clamp(18 + (waveFactor * 48), 18, 70);
+                        byte waveFillAlpha = (byte)(baseUnfilledFillAlpha + (waveFactor * 7));
+                        byte waveBorderAlpha = (byte)(baseUnfilledBorderAlpha + (waveFactor * 22));
 
                         var waveFill = new SolidColorBrush(Color.FromArgb(waveFillAlpha, baseColor.R, baseColor.G, baseColor.B));
                         var wavePen = new Pen(new SolidColorBrush(Color.FromArgb(waveBorderAlpha, baseColor.R, baseColor.G, baseColor.B)), 0.9);
