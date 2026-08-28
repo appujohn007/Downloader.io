@@ -2,6 +2,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:DownloaderApp.ViewModels"
         xmlns:models="using:DownloaderApp.Models"
+        xmlns:controls="using:DownloaderApp.Controls"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d" d:DesignWidth="1050" d:DesignHeight="680"
@@ -202,121 +203,139 @@
                                 <DataTemplate DataType="models:DownloadItem">
                                     <Border Classes="download-card"
                                             Margin="0,0,0,8"
-                                            Padding="14,10">
-                                        <Grid RowDefinitions="Auto, Auto, Auto">
-                                            <!-- Top Row: File Name & Size -->
-                                            <Grid Grid.Row="0" ColumnDefinitions="*, Auto" Margin="0,0,0,6">
-                                                <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                                                    <!-- Live pulse when active -->
-                                                    <Ellipse Width="6" Height="6" Fill="{DynamicResource AccentBrush}" VerticalAlignment="Center" IsVisible="{Binding IsActive}" Classes="pulse-dot" />
-                                                    <TextBlock Text="{Binding FileName}" FontWeight="Medium" FontSize="13" Foreground="{DynamicResource TextPrimaryBrush}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
-                                                </StackPanel>
-                                                <TextBlock Grid.Column="1" Text="{Binding FormattedSize}" MinWidth="110" TextAlignment="Right" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center" Margin="8,0,0,0" />
-                                            </Grid>
+                                            Padding="14,10"
+                                            ClipToBounds="True">
+                                        <Grid>
+                                            <!-- Dynamic Matrix Block Tile Progress Grid Background -->
+                                            <controls:BlockProgressBackground
+                                                Progress="{Binding ProgressPercentage}"
+                                                IsActive="{Binding IsActive}"
+                                                IsCompleted="{Binding IsCompleted}"
+                                                EmptyBorderBrush="{DynamicResource TileGridEmptyBorderBrush}"
+                                                FilledBrush="{DynamicResource TileGridFilledBrush}"
+                                                FilledBorderBrush="{DynamicResource TileGridFilledBorderBrush}"
+                                                ActiveHeadBrush="{DynamicResource TileGridActiveHeadBrush}"
+                                                HorizontalAlignment="Stretch"
+                                                VerticalAlignment="Stretch"
+                                                Margin="-14,-10"
+                                                IsHitTestVisible="False" />
 
-                                            <!-- Middle Row: Minimal Progress Bar -->
-                                            <ProgressBar Grid.Row="1"
-                                                         Classes="thin-progress"
-                                                         Value="{Binding ProgressPercentage}"
-                                                         Minimum="0"
-                                                         Maximum="100"
-                                                         Margin="0,0,0,6" />
+                                            <!-- Foreground Download Card Content -->
+                                            <Grid RowDefinitions="Auto, Auto, Auto">
+                                                <!-- Top Row: File Name & Size -->
+                                                <Grid Grid.Row="0" ColumnDefinitions="*, Auto" Margin="0,0,0,6">
+                                                    <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                                        <!-- Live pulse when active -->
+                                                        <Ellipse Width="6" Height="6" Fill="{DynamicResource AccentBrush}" VerticalAlignment="Center" IsVisible="{Binding IsActive}" Classes="pulse-dot" />
+                                                        <TextBlock Text="{Binding FileName}" FontWeight="Medium" FontSize="13" Foreground="{DynamicResource TextPrimaryBrush}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                                    </StackPanel>
+                                                    <TextBlock Grid.Column="1" Text="{Binding FormattedSize}" MinWidth="110" TextAlignment="Right" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center" Margin="8,0,0,0" />
+                                                </Grid>
 
-                                            <!-- Bottom Row: Metadata & Actions -->
-                                            <Grid Grid.Row="2" ColumnDefinitions="*, Auto">
-                                                <!-- Metadata Line with Stable Fixed Boundaries -->
-                                                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
-                                                    <!-- Progress Percentage (Fixed Slot) -->
-                                                    <TextBlock Text="{Binding ProgressPercentage, StringFormat='{}{0:0.#}%'}"
-                                                               Width="44"
-                                                               FontSize="11"
-                                                               FontWeight="SemiBold"
-                                                               Foreground="{DynamicResource AccentBrush}"
-                                                               VerticalAlignment="Center" />
+                                                <!-- Middle Row: Minimal Progress Bar -->
+                                                <ProgressBar Grid.Row="1"
+                                                             Classes="thin-progress"
+                                                             Value="{Binding ProgressPercentage}"
+                                                             Minimum="0"
+                                                             Maximum="100"
+                                                             Margin="0,0,0,6" />
 
-                                                    <!-- Status (Fixed Slot) -->
-                                                    <TextBlock Text="•" FontSize="10" Foreground="{DynamicResource TextMutedBrush}" Margin="6,0" VerticalAlignment="Center" />
-                                                    <TextBlock Text="{Binding StatusDisplayText}"
-                                                               MinWidth="76"
-                                                               FontSize="11"
-                                                               Foreground="{DynamicResource TextSecondaryBrush}"
-                                                               VerticalAlignment="Center" />
+                                                <!-- Bottom Row: Metadata & Actions -->
+                                                <Grid Grid.Row="2" ColumnDefinitions="*, Auto">
+                                                    <!-- Metadata Line with Stable Fixed Boundaries -->
+                                                    <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                                                        <!-- Progress Percentage (Fixed Slot) -->
+                                                        <TextBlock Text="{Binding ProgressPercentage, StringFormat='{}{0:0.#}%'}"
+                                                                   Width="44"
+                                                                   FontSize="11"
+                                                                   FontWeight="SemiBold"
+                                                                   Foreground="{DynamicResource AccentBrush}"
+                                                                   VerticalAlignment="Center" />
 
-                                                    <!-- Live Speed (Fixed Slot) -->
-                                                    <StackPanel Orientation="Horizontal" IsVisible="{Binding FormattedSpeed, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                                                        <!-- Status (Fixed Slot) -->
                                                         <TextBlock Text="•" FontSize="10" Foreground="{DynamicResource TextMutedBrush}" Margin="6,0" VerticalAlignment="Center" />
-                                                        <TextBlock Text="{Binding FormattedSpeed}"
-                                                                   MinWidth="85"
+                                                        <TextBlock Text="{Binding StatusDisplayText}"
+                                                                   MinWidth="76"
                                                                    FontSize="11"
                                                                    Foreground="{DynamicResource TextSecondaryBrush}"
                                                                    VerticalAlignment="Center" />
+
+                                                        <!-- Live Speed (Fixed Slot) -->
+                                                        <StackPanel Orientation="Horizontal" IsVisible="{Binding FormattedSpeed, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                                                            <TextBlock Text="•" FontSize="10" Foreground="{DynamicResource TextMutedBrush}" Margin="6,0" VerticalAlignment="Center" />
+                                                            <TextBlock Text="{Binding FormattedSpeed}"
+                                                                       MinWidth="85"
+                                                                       FontSize="11"
+                                                                       Foreground="{DynamicResource TextSecondaryBrush}"
+                                                                       VerticalAlignment="Center" />
+                                                        </StackPanel>
+
+                                                        <!-- ETA (Fixed Slot) -->
+                                                        <StackPanel Orientation="Horizontal" IsVisible="{Binding FormattedEta, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                                                            <TextBlock Text="•" FontSize="10" Foreground="{DynamicResource TextMutedBrush}" Margin="6,0" VerticalAlignment="Center" />
+                                                            <TextBlock Text="{Binding FormattedEta}"
+                                                                       MinWidth="95"
+                                                                       FontSize="11"
+                                                                       Foreground="{DynamicResource TextMutedBrush}"
+                                                                       VerticalAlignment="Center" />
+                                                        </StackPanel>
+
+                                                        <!-- Error msg -->
+                                                        <StackPanel Orientation="Horizontal" IsVisible="{Binding ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                                                            <TextBlock Text="•" FontSize="10" Foreground="{DynamicResource TextMutedBrush}" Margin="6,0" VerticalAlignment="Center" />
+                                                            <TextBlock Text="{Binding ErrorMessage}"
+                                                                       FontSize="11"
+                                                                       Foreground="#EF4444"
+                                                                       VerticalAlignment="Center"
+                                                                       TextTrimming="CharacterEllipsis" />
+                                                        </StackPanel>
                                                     </StackPanel>
 
-                                                    <!-- ETA (Fixed Slot) -->
-                                                    <StackPanel Orientation="Horizontal" IsVisible="{Binding FormattedEta, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
-                                                        <TextBlock Text="•" FontSize="10" Foreground="{DynamicResource TextMutedBrush}" Margin="6,0" VerticalAlignment="Center" />
-                                                        <TextBlock Text="{Binding FormattedEta}"
-                                                                   MinWidth="95"
-                                                                   FontSize="11"
-                                                                   Foreground="{DynamicResource TextMutedBrush}"
-                                                                   VerticalAlignment="Center" />
+                                                    <!-- Action Buttons -->
+                                                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="2">
+                                                        <!-- Pause -->
+                                                        <Button Classes="ghost-btn" IsVisible="{Binding CanPause}"
+                                                                Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).PauseDownloadCommand}"
+                                                                CommandParameter="{Binding}" ToolTip.Tip="Pause">
+                                                            <PathIcon Width="10" Height="10" Foreground="{DynamicResource TextSecondaryBrush}" Data="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
+                                                        </Button>
+
+                                                        <!-- Resume -->
+                                                        <Button Classes="ghost-btn" IsVisible="{Binding CanResume}"
+                                                                Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).StartDownloadCommand}"
+                                                                CommandParameter="{Binding}" ToolTip.Tip="Resume">
+                                                            <PathIcon Width="10" Height="10" Foreground="{DynamicResource TextSecondaryBrush}" Data="M8 5v14l11-7z" />
+                                                        </Button>
+
+                                                        <!-- Open File -->
+                                                        <Button Classes="ghost-btn" IsVisible="{Binding IsCompleted}"
+                                                                Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).OpenFileCommand}"
+                                                                CommandParameter="{Binding}" ToolTip.Tip="Open File">
+                                                            <PathIcon Width="10" Height="10" Foreground="{DynamicResource TextSecondaryBrush}" Data="M19 19H5V5h7V3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z" />
+                                                        </Button>
+
+                                                        <!-- Open Folder -->
+                                                        <Button Classes="ghost-btn"
+                                                                Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).OpenFolderCommand}"
+                                                                CommandParameter="{Binding}" ToolTip.Tip="Show in Explorer">
+                                                            <PathIcon Width="10" Height="10" Foreground="{DynamicResource TextSecondaryBrush}" Data="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z" />
+                                                        </Button>
+
+                                                        <!-- Copy Link -->
+                                                        <Button Classes="ghost-btn"
+                                                                Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).CopyUrlCommand}"
+                                                                CommandParameter="{Binding}" ToolTip.Tip="Copy Link">
+                                                            <PathIcon Width="10" Height="10" Foreground="{DynamicResource TextSecondaryBrush}" Data="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z" />
+                                                        </Button>
+
+                                                        <!-- Delete -->
+                                                        <Button Classes="ghost-btn"
+                                                                Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).DeleteDownloadCommand}"
+                                                                CommandParameter="{Binding}" ToolTip.Tip="Delete">
+                                                            <PathIcon Width="10" Height="10" Foreground="{DynamicResource TextSecondaryBrush}" Data="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z" />
+                                                        </Button>
                                                     </StackPanel>
-
-                                                    <!-- Error msg -->
-                                                    <StackPanel Orientation="Horizontal" IsVisible="{Binding ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
-                                                        <TextBlock Text="•" FontSize="10" Foreground="{DynamicResource TextMutedBrush}" Margin="6,0" VerticalAlignment="Center" />
-                                                        <TextBlock Text="{Binding ErrorMessage}"
-                                                                   FontSize="11"
-                                                                   Foreground="#EF4444"
-                                                                   VerticalAlignment="Center"
-                                                                   TextTrimming="CharacterEllipsis" />
-                                                    </StackPanel>
-                                                </StackPanel>
-
-                                                <!-- Action Buttons -->
-                                                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="2">
-                                                    <!-- Pause -->
-                                                    <Button Classes="ghost-btn" IsVisible="{Binding CanPause}"
-                                                            Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).PauseDownloadCommand}"
-                                                            CommandParameter="{Binding}" ToolTip.Tip="Pause">
-                                                        <PathIcon Width="10" Height="10" Foreground="{DynamicResource TextSecondaryBrush}" Data="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
-                                                    </Button>
-
-                                                    <!-- Resume -->
-                                                    <Button Classes="ghost-btn" IsVisible="{Binding CanResume}"
-                                                            Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).StartDownloadCommand}"
-                                                            CommandParameter="{Binding}" ToolTip.Tip="Resume">
-                                                        <PathIcon Width="10" Height="10" Foreground="{DynamicResource TextSecondaryBrush}" Data="M8 5v14l11-7z" />
-                                                    </Button>
-
-                                                    <!-- Open File -->
-                                                    <Button Classes="ghost-btn" IsVisible="{Binding IsCompleted}"
-                                                            Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).OpenFileCommand}"
-                                                            CommandParameter="{Binding}" ToolTip.Tip="Open File">
-                                                        <PathIcon Width="10" Height="10" Foreground="{DynamicResource TextSecondaryBrush}" Data="M19 19H5V5h7V3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z" />
-                                                    </Button>
-
-                                                    <!-- Open Folder -->
-                                                    <Button Classes="ghost-btn"
-                                                            Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).OpenFolderCommand}"
-                                                            CommandParameter="{Binding}" ToolTip.Tip="Show in Explorer">
-                                                        <PathIcon Width="10" Height="10" Foreground="{DynamicResource TextSecondaryBrush}" Data="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z" />
-                                                    </Button>
-
-                                                    <!-- Copy Link -->
-                                                    <Button Classes="ghost-btn"
-                                                            Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).CopyUrlCommand}"
-                                                            CommandParameter="{Binding}" ToolTip.Tip="Copy Link">
-                                                        <PathIcon Width="10" Height="10" Foreground="{DynamicResource TextSecondaryBrush}" Data="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z" />
-                                                    </Button>
-
-                                                    <!-- Delete -->
-                                                    <Button Classes="ghost-btn"
-                                                            Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).DeleteDownloadCommand}"
-                                                            CommandParameter="{Binding}" ToolTip.Tip="Delete">
-                                                        <PathIcon Width="10" Height="10" Foreground="{DynamicResource TextSecondaryBrush}" Data="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z" />
-                                                    </Button>
-                                                </StackPanel>
+                                                </Grid>
                                             </Grid>
                                         </Grid>
                                     </Border>

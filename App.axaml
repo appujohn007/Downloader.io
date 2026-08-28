@@ -37,6 +37,10 @@
                     <SolidColorBrush x:Key="GlassOverlayBgBrush" Color="#F2FFFFFF" />
                     <SolidColorBrush x:Key="GlassOverlayBorderBrush" Color="#E2E8F0" />
                     <SolidColorBrush x:Key="ChipBgBrush" Color="#F1F5F9" />
+                    <SolidColorBrush x:Key="TileGridEmptyBorderBrush" Color="#15000000" />
+                    <SolidColorBrush x:Key="TileGridFilledBrush" Color="#222563EB" />
+                    <SolidColorBrush x:Key="TileGridFilledBorderBrush" Color="#442563EB" />
+                    <SolidColorBrush x:Key="TileGridActiveHeadBrush" Color="#662563EB" />
                 </ResourceDictionary>
 
                 <!-- MINIMAL LCD DARK PALETTE -->
@@ -65,6 +69,10 @@
                     <SolidColorBrush x:Key="GlassOverlayBgBrush" Color="#F2101217" />
                     <SolidColorBrush x:Key="GlassOverlayBorderBrush" Color="#222530" />
                     <SolidColorBrush x:Key="ChipBgBrush" Color="#181B22" />
+                    <SolidColorBrush x:Key="TileGridEmptyBorderBrush" Color="#18FFFFFF" />
+                    <SolidColorBrush x:Key="TileGridFilledBrush" Color="#263B82F6" />
+                    <SolidColorBrush x:Key="TileGridFilledBorderBrush" Color="#553B82F6" />
+                    <SolidColorBrush x:Key="TileGridActiveHeadBrush" Color="#9938BDF8" />
                 </ResourceDictionary>
             </ResourceDictionary.ThemeDictionaries>
         </ResourceDictionary>
