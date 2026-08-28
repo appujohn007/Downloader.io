@@ -1,6 +1,9 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <OutputType>WinExe</OutputType>
+    <!-- In Debug mode, OutputType is Exe so logs and errors stream live to the CMD/Terminal -->
+    <!-- In Release mode, OutputType is WinExe for a windowed desktop app -->
+    <OutputType Condition="'$(Configuration)' != 'Release'">Exe</OutputType>
+    <OutputType Condition="'$(Configuration)' == 'Release'">WinExe</OutputType>
     <TargetFramework>net8.0</TargetFramework>
     <Nullable>enable</Nullable>
     <BuiltInComInteropSupport>true</BuiltInComInteropSupport>

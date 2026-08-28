@@ -49,7 +49,6 @@ public class DownloadService : IDownloadService
                 var name = Path.GetFileName(localPath);
                 if (!string.IsNullOrWhiteSpace(name))
                 {
-                    // Remove invalid file characters
                     var invalid = Path.GetInvalidFileNameChars();
                     foreach (var c in invalid)
                     {
@@ -59,9 +58,9 @@ public class DownloadService : IDownloadService
                 }
             }
         }
-        catch
+        catch (Exception ex)
         {
-            // fallback
+            Logger.Warn($"Failed to extract filename from '{url}': {ex.Message}");
         }
 
         return "download.bin";
@@ -71,23 +70,30 @@ public class DownloadService : IDownloadService
     {
         try
         {
+            Logger.Debug($"Probing file size via HTTP HEAD: {url}");
             using var req = new HttpRequestMessage(HttpMethod.Head, url);
             using var res = await HttpClient.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, ct);
             if (res.IsSuccessStatusCode && res.Content.Headers.ContentLength.HasValue)
             {
-                return res.Content.Headers.ContentLength.Value;
+                var length = res.Content.Headers.ContentLength.Value;
+                Logger.Info($"Probe result for {url}: {DownloadItem.FormatBytes(length)}");
+                return length;
             }
         }
-        catch
+        catch (Exception ex)
         {
-            // Ignore head probe failure
+            Logger.Warn($"Probe failed for {url}: {ex.Message}");
         }
         return -1;
     }
 
     public async Task StartDownloadAsync(DownloadItem item)
     {
-        if (item.Status == DownloadStatus.Downloading) return;
+        if (item.Status == DownloadStatus.Downloading)
+        {
+            Logger.Warn($"Download '{item.FileName}' is already active. Ignoring start request.");
+            return;
+        }
 
         item.Cts?.Cancel();
         item.Cts = new CancellationTokenSource();
@@ -97,10 +103,13 @@ public class DownloadService : IDownloadService
         item.ErrorMessage = string.Empty;
         UpdateUi(item);
 
+        Logger.Download($"[CONNECT] Starting download for '{item.FileName}' from: {item.Url}");
+
         try
         {
             if (!Directory.Exists(item.SaveDirectory))
             {
+                Logger.Info($"Creating destination directory: {item.SaveDirectory}");
                 Directory.CreateDirectory(item.SaveDirectory);
             }
 
@@ -110,6 +119,7 @@ public class DownloadService : IDownloadService
             if (File.Exists(targetFilePath))
             {
                 existingBytes = new FileInfo(targetFilePath).Length;
+                Logger.Download($"[RESUME] Found existing partial file '{targetFilePath}' with {DownloadItem.FormatBytes(existingBytes)}");
             }
 
             using var request = new HttpRequestMessage(HttpMethod.Get, item.Url);
@@ -118,17 +128,20 @@ public class DownloadService : IDownloadService
             if (existingBytes > 0)
             {
                 request.Headers.Range = new RangeHeaderValue(existingBytes, null);
+                Logger.Debug($"Sent HTTP header: Range: bytes={existingBytes}-");
             }
 
             using var response = await HttpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, ct);
 
             bool isRangeAccepted = response.StatusCode == System.Net.HttpStatusCode.PartialContent;
+            Logger.Info($"[HTTP RESPONSE] Status: {(int)response.StatusCode} {response.ReasonPhrase} (Partial Content Accepted: {isRangeAccepted})");
 
             if (!response.IsSuccessStatusCode && !isRangeAccepted)
             {
                 // If 416 Range Not Satisfiable, start fresh
                 if (response.StatusCode == System.Net.HttpStatusCode.RequestedRangeNotSatisfiable)
                 {
+                    Logger.Warn($"HTTP 416 Range Not Satisfiable. Deleting existing partial file and starting from byte 0.");
                     existingBytes = 0;
                     if (File.Exists(targetFilePath)) File.Delete(targetFilePath);
 
@@ -154,10 +167,11 @@ public class DownloadService : IDownloadService
 
             if (!isRangeAccepted && existingBytes > 0)
             {
-                // Server doesn't support resume, restart from beginning
+                Logger.Warn("Server does not support partial content ranges. Restarting download from byte 0.");
                 existingBytes = 0;
             }
 
+            Logger.Download($"[DOWNLOADING] '{item.FileName}' | Total Target Size: {DownloadItem.FormatBytes(totalLength)} | Destination: {targetFilePath}");
             await ProcessDownloadStreamAsync(item, response, targetFilePath, existingBytes, ct, totalLength);
         }
         catch (OperationCanceledException)
@@ -168,6 +182,7 @@ public class DownloadService : IDownloadService
             }
             item.SpeedBytesPerSec = 0;
             UpdateUi(item);
+            Logger.Warn($"[PAUSED/CANCELLED] Download '{item.FileName}' interrupted by user.");
         }
         catch (Exception ex)
         {
@@ -175,7 +190,7 @@ public class DownloadService : IDownloadService
             item.ErrorMessage = ex.Message;
             item.SpeedBytesPerSec = 0;
             UpdateUi(item);
-            Debug.WriteLine($"Download failed for {item.Url}: {ex}");
+            Logger.Error($"[FAILED] Download '{item.FileName}' encountered an error: {ex.Message}", ex);
         }
     }
 
@@ -210,6 +225,7 @@ public class DownloadService : IDownloadService
         long bytesSinceLastSpeedCalc = 0;
         var stopwatch = Stopwatch.StartNew();
         var lastUiUpdate = Stopwatch.StartNew();
+        var lastConsoleLog = Stopwatch.StartNew();
 
         while ((bytesRead = await contentStream.ReadAsync(buffer, 0, buffer.Length, ct)) > 0)
         {
@@ -241,6 +257,13 @@ public class DownloadService : IDownloadService
                 UpdateUi(item);
                 lastUiUpdate.Restart();
             }
+
+            // Periodic terminal log every 3 seconds for clean terminal telemetry
+            if (lastConsoleLog.ElapsedMilliseconds >= 3000)
+            {
+                Logger.Download($"[PROGRESS] '{item.FileName}': {item.ProgressPercentage:0.0}% | {DownloadItem.FormatBytes(item.DownloadedBytes)} / {DownloadItem.FormatBytes(item.TotalBytes)} | {DownloadItem.FormatBytes((long)item.SpeedBytesPerSec)}/s");
+                lastConsoleLog.Restart();
+            }
         }
 
         await fileStream.FlushAsync(ct);
@@ -255,12 +278,14 @@ public class DownloadService : IDownloadService
         }
 
         UpdateUi(item);
+        Logger.Success($"[COMPLETED] Successfully downloaded '{item.FileName}' ({DownloadItem.FormatBytes(item.DownloadedBytes)}) to '{targetFilePath}'");
     }
 
     public void PauseDownload(DownloadItem item)
     {
         if (item.Status == DownloadStatus.Downloading || item.Status == DownloadStatus.Connecting)
         {
+            Logger.Info($"[USER ACTION] Pausing download for '{item.FileName}'");
             item.Status = DownloadStatus.Paused;
             item.SpeedBytesPerSec = 0;
             item.Cts?.Cancel();
@@ -272,12 +297,14 @@ public class DownloadService : IDownloadService
     {
         if (item.Status == DownloadStatus.Paused || item.Status == DownloadStatus.Failed)
         {
+            Logger.Info($"[USER ACTION] Resuming download for '{item.FileName}'");
             _ = StartDownloadAsync(item);
         }
     }
 
     public void CancelDownload(DownloadItem item)
     {
+        Logger.Info($"[USER ACTION] Canceling download for '{item.FileName}'");
         item.Status = DownloadStatus.Canceled;
         item.SpeedBytesPerSec = 0;
         item.Cts?.Cancel();
