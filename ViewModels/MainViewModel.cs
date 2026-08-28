@@ -18,6 +18,8 @@ public partial class MainViewModel : ViewModelBase
     private readonly IDownloadService _downloadService;
     private readonly IClipboardService _clipboardService;
     private readonly IFileService _fileService;
+    private readonly ISettingsService _settingsService;
+    private readonly AppSettings _settings;
 
     public ObservableCollection<DownloadItem> AllDownloads { get; } = new();
     public ObservableCollection<DownloadItem> DisplayedDownloads { get; } = new();
@@ -66,11 +68,22 @@ public partial class MainViewModel : ViewModelBase
     public MainViewModel(
         IDownloadService downloadService,
         IClipboardService clipboardService,
-        IFileService fileService)
+        IFileService fileService,
+        ISettingsService settingsService)
     {
         _downloadService = downloadService;
         _clipboardService = clipboardService;
         _fileService = fileService;
+        _settingsService = settingsService;
+
+        _settings = _settingsService.LoadSettings();
+        IsDarkMode = _settings.IsDarkMode;
+        ThemeModeTitle = IsDarkMode ? "LCD Dark" : "Light";
+
+        if (Application.Current != null)
+        {
+            Application.Current.RequestedThemeVariant = IsDarkMode ? ThemeVariant.Dark : ThemeVariant.Light;
+        }
 
         _statsTimer = new DispatcherTimer
         {
@@ -83,7 +96,7 @@ public partial class MainViewModel : ViewModelBase
         ApplyFilter();
     }
 
-    public MainViewModel() : this(new DownloadService(), new ClipboardService(), new FileService())
+    public MainViewModel() : this(new DownloadService(), new ClipboardService(), new FileService(), new SettingsService())
     {
     }
 
@@ -364,6 +377,9 @@ public partial class MainViewModel : ViewModelBase
         {
             Application.Current.RequestedThemeVariant = IsDarkMode ? ThemeVariant.Dark : ThemeVariant.Light;
         }
+
+        _settings.IsDarkMode = IsDarkMode;
+        _settingsService.SaveSettings(_settings);
 
         ShowNotification($"Switched to {ThemeModeTitle} Mode");
     }
