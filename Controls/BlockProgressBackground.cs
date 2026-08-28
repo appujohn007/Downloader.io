@@ -37,6 +37,7 @@ public class BlockProgressBackground : Control
 
     private double _animatedProgress = 0.0;
     private bool _isInitialized = false;
+    private double _animPhase = 0.0;
     private readonly DispatcherTimer _animTimer;
 
     // 10 distinct, vibrant gradient palettes
@@ -188,6 +189,8 @@ public class BlockProgressBackground : Control
 
     private void OnAnimationTick(object? sender, EventArgs e)
     {
+        bool needsRedraw = false;
+
         // Smooth continuous progress interpolation without resetting
         double target = Math.Clamp(Progress, 0.0, 100.0);
         double diff = target - _animatedProgress;
@@ -195,14 +198,26 @@ public class BlockProgressBackground : Control
         if (Math.Abs(diff) > 0.05)
         {
             _animatedProgress += diff * 0.22;
-            InvalidateVisual();
+            needsRedraw = true;
         }
         else if (_animatedProgress != target)
         {
             _animatedProgress = target;
+            needsRedraw = true;
+        }
+
+        // Connecting wave animation phase
+        if (IsConnecting)
+        {
+            _animPhase = (_animPhase + 0.06) % (Math.PI * 2.0);
+            needsRedraw = true;
+        }
+
+        if (needsRedraw)
+        {
             InvalidateVisual();
         }
-        else
+        else if (!IsConnecting && Math.Abs(_animatedProgress - target) <= 0.05)
         {
             _animTimer.Stop();
         }
@@ -222,7 +237,6 @@ public class BlockProgressBackground : Control
         // Dynamically compute columns and rows based on current bounds
         int cols = (int)Math.Max(1, Math.Floor((bounds.Width + gap) / (cell + gap)));
         int rows = (int)Math.Max(1, Math.Floor((bounds.Height + gap) / (cell + gap)));
-        int totalCells = cols * rows;
 
         double actualGridWidth = (cols * cell) + ((cols - 1) * gap);
         double actualGridHeight = (rows * cell) + ((rows - 1) * gap);
@@ -230,92 +244,103 @@ public class BlockProgressBackground : Control
         double startX = Math.Max(0, (bounds.Width - actualGridWidth) / 2.0);
         double startY = Math.Max(0, (bounds.Height - actualGridHeight) / 2.0);
 
+        // Column-based progress so ALL rows fill together horizontally (matching the progress bar!)
         double pct = Math.Clamp(_animatedProgress, 0.0, 100.0);
-        double exactFilled = (pct / 100.0) * totalCells;
-        int filledCount = (int)Math.Floor(exactFilled);
-        double fractionalCell = exactFilled - filledCount;
+        double exactFilledCols = (pct / 100.0) * cols;
+        int fullFilledColCount = (int)Math.Floor(exactFilledCols);
+        double fractionalCol = exactFilledCols - fullFilledColCount;
 
         // Select palette cleanly from PaletteIndex
         int palIdx = Math.Abs(PaletteIndex) % Palettes.Length;
         var currentPalette = Palettes[palIdx];
 
-        // Theme-aware rendering for perfect aesthetic in both Light and Dark modes
+        // Theme-aware rendering: transparent, non-distracting unfilled matrix
         bool isLight = ActualThemeVariant == Avalonia.Styling.ThemeVariant.Light;
 
         IBrush emptyFillBrush;
         Pen emptyBorderPen;
         Pen glassHighlightPen;
-        Pen shadowPen;
         byte fillBaseAlpha;
         byte borderBaseAlpha;
 
         if (isLight)
         {
-            // Light Mode: crisp, well-defined subtle slate outline on light card
-            emptyFillBrush = new SolidColorBrush(Color.FromArgb(14, 15, 23, 42));
-            emptyBorderPen = new Pen(new SolidColorBrush(Color.FromArgb(46, 15, 23, 42)), 1.0);
-            glassHighlightPen = new Pen(new SolidColorBrush(Color.FromArgb(70, 255, 255, 255)), 0.8);
-            shadowPen = new Pen(new SolidColorBrush(Color.FromArgb(22, 15, 23, 42)), 0.8);
+            // Light Mode: subtle, transparent outline
+            emptyFillBrush = new SolidColorBrush(Color.FromArgb(4, 15, 23, 42));
+            emptyBorderPen = new Pen(new SolidColorBrush(Color.FromArgb(16, 15, 23, 42)), 0.85);
+            glassHighlightPen = new Pen(new SolidColorBrush(Color.FromArgb(45, 255, 255, 255)), 0.7);
             fillBaseAlpha = 26;
-            borderBaseAlpha = 68;
+            borderBaseAlpha = 65;
         }
         else
         {
-            // Dark Mode: refined, elegant cyber-glass tile matrix with soft depth
-            emptyFillBrush = new SolidColorBrush(Color.FromArgb(14, 255, 255, 255));
-            emptyBorderPen = new Pen(new SolidColorBrush(Color.FromArgb(36, 255, 255, 255)), 1.0);
-            glassHighlightPen = new Pen(new SolidColorBrush(Color.FromArgb(32, 255, 255, 255)), 0.8);
-            shadowPen = new Pen(new SolidColorBrush(Color.FromArgb(35, 0, 0, 0)), 0.8);
-            fillBaseAlpha = 28;
-            borderBaseAlpha = 70;
+            // Dark Mode: soft, ultra-translucent cyber-glass matrix
+            emptyFillBrush = new SolidColorBrush(Color.FromArgb(4, 255, 255, 255));
+            emptyBorderPen = new Pen(new SolidColorBrush(Color.FromArgb(18, 255, 255, 255)), 0.85);
+            glassHighlightPen = new Pen(new SolidColorBrush(Color.FromArgb(24, 255, 255, 255)), 0.7);
+            fillBaseAlpha = 30;
+            borderBaseAlpha = 72;
         }
 
-        int cellIndex = 0;
-        for (int r = 0; r < rows; r++)
+        for (int c = 0; c < cols; c++)
         {
-            double y = startY + r * (cell + gap);
-            for (int c = 0; c < cols; c++)
+            double x = startX + c * (cell + gap);
+            double horizontalRatio = (x + cell * 0.5) / bounds.Width;
+            var baseColor = GetPaletteGradientColor(currentPalette, horizontalRatio);
+
+            bool isColFullyFilled = c < fullFilledColCount;
+            bool isColFractional = c == fullFilledColCount && fractionalCol > 0.03;
+
+            for (int r = 0; r < rows; r++)
             {
-                double x = startX + c * (cell + gap);
+                double y = startY + r * (cell + gap);
                 var rect = new Rect(x, y, cell, cell);
                 var rrect = new RoundedRect(rect, radius);
 
-                // Horizontal gradient position across the full card width
-                double horizontalRatio = (x + cell * 0.5) / bounds.Width;
-                var baseColor = GetPaletteGradientColor(currentPalette, horizontalRatio);
-
-                if (cellIndex < filledCount)
+                if (isColFullyFilled)
                 {
-                    // Fully filled glass cell with soft horizontal liquid gradient & depth shading
+                    // Fully filled column cell across all rows
                     var fillBrush = new SolidColorBrush(Color.FromArgb(fillBaseAlpha, baseColor.R, baseColor.G, baseColor.B));
-                    var borderPen = new Pen(new SolidColorBrush(Color.FromArgb(borderBaseAlpha, baseColor.R, baseColor.G, baseColor.B)), 1.0);
+                    var borderPen = new Pen(new SolidColorBrush(Color.FromArgb(borderBaseAlpha, baseColor.R, baseColor.G, baseColor.B)), 0.9);
 
                     context.DrawRectangle(fillBrush, borderPen, rrect);
-                    // Bottom depth shadow line
-                    context.DrawLine(shadowPen, new Point(x + radius, y + cell - 0.5), new Point(x + cell - radius, y + cell - 0.5));
-                    // Top glass specular sheen line
                     context.DrawLine(glassHighlightPen, new Point(x + radius, y + 0.8), new Point(x + cell - radius, y + 0.8));
                 }
-                else if (cellIndex == filledCount && fractionalCell > 0.05)
+                else if (isColFractional)
                 {
-                    // Smoothly transitioning boundary cell
-                    byte fillAlpha = (byte)Math.Clamp(fillBaseAlpha * fractionalCell, 6, fillBaseAlpha);
-                    byte borderAlpha = (byte)Math.Clamp(borderBaseAlpha * fractionalCell, 18, borderBaseAlpha);
+                    // Smoothly transitioning boundary column
+                    byte fillAlpha = (byte)Math.Clamp(fillBaseAlpha * fractionalCol, 6, fillBaseAlpha);
+                    byte borderAlpha = (byte)Math.Clamp(borderBaseAlpha * fractionalCol, 18, borderBaseAlpha);
 
                     var fillBrush = new SolidColorBrush(Color.FromArgb(fillAlpha, baseColor.R, baseColor.G, baseColor.B));
-                    var borderPen = new Pen(new SolidColorBrush(Color.FromArgb(borderAlpha, baseColor.R, baseColor.G, baseColor.B)), 1.0);
+                    var borderPen = new Pen(new SolidColorBrush(Color.FromArgb(borderAlpha, baseColor.R, baseColor.G, baseColor.B)), 0.9);
 
                     context.DrawRectangle(fillBrush, borderPen, rrect);
                 }
                 else
                 {
-                    // Unfilled visible glass grid cell (distinct, opaque & balanced)
-                    context.DrawRectangle(emptyFillBrush, emptyBorderPen, rrect);
-                    // Top glass specular sheen line
-                    context.DrawLine(glassHighlightPen, new Point(x + radius, y + 0.8), new Point(x + cell - radius, y + 0.8));
-                }
+                    // Unfilled cell
+                    if (IsConnecting)
+                    {
+                        // Gentle traveling light wave across unfilled cells during connecting mode
+                        double wave = Math.Sin(_animPhase - (c * 0.18));
+                        double waveFactor = Math.Clamp(0.5 + (wave * 0.5), 0.0, 1.0);
 
-                cellIndex++;
+                        byte waveFillAlpha = (byte)Math.Clamp(4 + (waveFactor * 18), 4, 24);
+                        byte waveBorderAlpha = (byte)Math.Clamp(18 + (waveFactor * 48), 18, 70);
+
+                        var waveFill = new SolidColorBrush(Color.FromArgb(waveFillAlpha, baseColor.R, baseColor.G, baseColor.B));
+                        var wavePen = new Pen(new SolidColorBrush(Color.FromArgb(waveBorderAlpha, baseColor.R, baseColor.G, baseColor.B)), 0.9);
+
+                        context.DrawRectangle(waveFill, wavePen, rrect);
+                    }
+                    else
+                    {
+                        // Clean, soft translucent unfilled cell
+                        context.DrawRectangle(emptyFillBrush, emptyBorderPen, rrect);
+                        context.DrawLine(glassHighlightPen, new Point(x + radius, y + 0.8), new Point(x + cell - radius, y + 0.8));
+                    }
+                }
             }
         }
     }

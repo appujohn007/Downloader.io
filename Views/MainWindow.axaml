@@ -274,7 +274,7 @@
                                                             <TextBlock Text="{Binding FormattedEta}"
                                                                        MinWidth="95"
                                                                        FontSize="11"
-                                                                       Foreground="{DynamicResource TextMutedBrush}"
+                                                                       Foreground="{DynamicResource TextSecondaryBrush}"
                                                                        VerticalAlignment="Center" />
                                                         </StackPanel>
 
