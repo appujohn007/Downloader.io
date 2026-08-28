@@ -230,21 +230,22 @@ public class BlockProgressBackground : Control
         var bounds = Bounds;
         if (bounds.Width <= 1 || bounds.Height <= 1) return;
 
-        double cell = CellSize > 0 ? CellSize : 8.0;
         double gap = CellGap >= 0 ? CellGap : 2.5;
+        double nominalSize = CellSize > 0 ? CellSize : 8.0;
+        double nominalStep = nominalSize + gap;
         double radius = CellCornerRadius >= 0 ? CellCornerRadius : 1.5;
 
-        // Dynamically compute columns and rows based on current bounds
-        int cols = (int)Math.Max(1, Math.Floor((bounds.Width + gap) / (cell + gap)));
-        int rows = (int)Math.Max(1, Math.Floor((bounds.Height + gap) / (cell + gap)));
+        // Dynamically compute exact integer columns and rows to seamlessly span 100% of bounds
+        int cols = Math.Max(1, (int)Math.Round((bounds.Width + gap) / nominalStep));
+        int rows = Math.Max(1, (int)Math.Round((bounds.Height + gap) / nominalStep));
+
+        double stepX = bounds.Width / cols;
+        double stepY = bounds.Height / rows;
+
+        double cellW = Math.Max(2.0, stepX - gap);
+        double cellH = Math.Max(2.0, stepY - gap);
 
         int totalCells = cols * rows;
-
-        double actualGridWidth = (cols * cell) + ((cols - 1) * gap);
-        double actualGridHeight = (rows * cell) + ((rows - 1) * gap);
-
-        double startX = Math.Max(0, (bounds.Width - actualGridWidth) / 2.0);
-        double startY = Math.Max(0, (bounds.Height - actualGridHeight) / 2.0);
 
         // Fill cell-by-cell sequentially to the right row by row based on percentage
         double pct = Math.Clamp(_animatedProgress, 0.0, 100.0);
@@ -293,14 +294,14 @@ public class BlockProgressBackground : Control
         int cellIndex = 0;
         for (int r = 0; r < rows; r++)
         {
-            double y = startY + r * (cell + gap);
+            double y = (r * stepY) + (gap * 0.5);
             for (int c = 0; c < cols; c++)
             {
-                double x = startX + c * (cell + gap);
-                var rect = new Rect(x, y, cell, cell);
+                double x = (c * stepX) + (gap * 0.5);
+                var rect = new Rect(x, y, cellW, cellH);
                 var rrect = new RoundedRect(rect, radius);
 
-                double horizontalRatio = (x + cell * 0.5) / bounds.Width;
+                double horizontalRatio = (x + cellW * 0.5) / bounds.Width;
                 var baseColor = GetPaletteGradientColor(currentPalette, horizontalRatio);
 
                 if (cellIndex < filledCount)
@@ -310,7 +311,7 @@ public class BlockProgressBackground : Control
                     var borderPen = new Pen(new SolidColorBrush(Color.FromArgb(borderBaseAlpha, baseColor.R, baseColor.G, baseColor.B)), 0.9);
 
                     context.DrawRectangle(fillBrush, borderPen, rrect);
-                    context.DrawLine(glassHighlightPen, new Point(x + radius, y + 0.8), new Point(x + cell - radius, y + 0.8));
+                    context.DrawLine(glassHighlightPen, new Point(x + radius, y + 0.8), new Point(x + cellW - radius, y + 0.8));
                 }
                 else if (cellIndex == filledCount && fractionalCell > 0.03)
                 {
@@ -344,7 +345,7 @@ public class BlockProgressBackground : Control
                     {
                         // Clean, soft translucent unfilled cell
                         context.DrawRectangle(emptyFillBrush, emptyBorderPen, rrect);
-                        context.DrawLine(glassHighlightPen, new Point(x + radius, y + 0.8), new Point(x + cell - radius, y + 0.8));
+                        context.DrawLine(glassHighlightPen, new Point(x + radius, y + 0.8), new Point(x + cellW - radius, y + 0.8));
                     }
                 }
 
