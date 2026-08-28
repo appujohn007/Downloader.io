@@ -245,26 +245,29 @@ public class BlockProgressBackground : Control
         IBrush emptyFillBrush;
         Pen emptyBorderPen;
         Pen glassHighlightPen;
+        Pen shadowPen;
         byte fillBaseAlpha;
         byte borderBaseAlpha;
 
         if (isLight)
         {
-            // Light Mode: visible subtle dark-slate outline on light card
-            emptyFillBrush = new SolidColorBrush(Color.FromArgb(8, 15, 23, 42));
-            emptyBorderPen = new Pen(new SolidColorBrush(Color.FromArgb(30, 15, 23, 42)), 1.0);
-            glassHighlightPen = new Pen(new SolidColorBrush(Color.FromArgb(60, 255, 255, 255)), 0.8);
-            fillBaseAlpha = 32;
-            borderBaseAlpha = 80;
+            // Light Mode: crisp, well-defined subtle slate outline on light card
+            emptyFillBrush = new SolidColorBrush(Color.FromArgb(14, 15, 23, 42));
+            emptyBorderPen = new Pen(new SolidColorBrush(Color.FromArgb(46, 15, 23, 42)), 1.0);
+            glassHighlightPen = new Pen(new SolidColorBrush(Color.FromArgb(70, 255, 255, 255)), 0.8);
+            shadowPen = new Pen(new SolidColorBrush(Color.FromArgb(22, 15, 23, 42)), 0.8);
+            fillBaseAlpha = 26;
+            borderBaseAlpha = 68;
         }
         else
         {
-            // Dark Mode: soft, elegant translucent glass tile matrix
-            emptyFillBrush = new SolidColorBrush(Color.FromArgb(8, 255, 255, 255));
-            emptyBorderPen = new Pen(new SolidColorBrush(Color.FromArgb(24, 255, 255, 255)), 1.0);
-            glassHighlightPen = new Pen(new SolidColorBrush(Color.FromArgb(28, 255, 255, 255)), 0.8);
-            fillBaseAlpha = 36;
-            borderBaseAlpha = 85;
+            // Dark Mode: refined, elegant cyber-glass tile matrix with soft depth
+            emptyFillBrush = new SolidColorBrush(Color.FromArgb(14, 255, 255, 255));
+            emptyBorderPen = new Pen(new SolidColorBrush(Color.FromArgb(36, 255, 255, 255)), 1.0);
+            glassHighlightPen = new Pen(new SolidColorBrush(Color.FromArgb(32, 255, 255, 255)), 0.8);
+            shadowPen = new Pen(new SolidColorBrush(Color.FromArgb(35, 0, 0, 0)), 0.8);
+            fillBaseAlpha = 28;
+            borderBaseAlpha = 70;
         }
 
         int cellIndex = 0;
@@ -283,18 +286,21 @@ public class BlockProgressBackground : Control
 
                 if (cellIndex < filledCount)
                 {
-                    // Fully filled glass cell with horizontal liquid gradient
+                    // Fully filled glass cell with soft horizontal liquid gradient & depth shading
                     var fillBrush = new SolidColorBrush(Color.FromArgb(fillBaseAlpha, baseColor.R, baseColor.G, baseColor.B));
                     var borderPen = new Pen(new SolidColorBrush(Color.FromArgb(borderBaseAlpha, baseColor.R, baseColor.G, baseColor.B)), 1.0);
 
                     context.DrawRectangle(fillBrush, borderPen, rrect);
+                    // Bottom depth shadow line
+                    context.DrawLine(shadowPen, new Point(x + radius, y + cell - 0.5), new Point(x + cell - radius, y + cell - 0.5));
+                    // Top glass specular sheen line
                     context.DrawLine(glassHighlightPen, new Point(x + radius, y + 0.8), new Point(x + cell - radius, y + 0.8));
                 }
                 else if (cellIndex == filledCount && fractionalCell > 0.05)
                 {
                     // Smoothly transitioning boundary cell
-                    byte fillAlpha = (byte)Math.Clamp(fillBaseAlpha * fractionalCell, 8, fillBaseAlpha);
-                    byte borderAlpha = (byte)Math.Clamp(borderBaseAlpha * fractionalCell, 20, borderBaseAlpha);
+                    byte fillAlpha = (byte)Math.Clamp(fillBaseAlpha * fractionalCell, 6, fillBaseAlpha);
+                    byte borderAlpha = (byte)Math.Clamp(borderBaseAlpha * fractionalCell, 18, borderBaseAlpha);
 
                     var fillBrush = new SolidColorBrush(Color.FromArgb(fillAlpha, baseColor.R, baseColor.G, baseColor.B));
                     var borderPen = new Pen(new SolidColorBrush(Color.FromArgb(borderAlpha, baseColor.R, baseColor.G, baseColor.B)), 1.0);
@@ -303,8 +309,9 @@ public class BlockProgressBackground : Control
                 }
                 else
                 {
-                    // Unfilled visible glass grid cell (clean, distinct & subtle)
+                    // Unfilled visible glass grid cell (distinct, opaque & balanced)
                     context.DrawRectangle(emptyFillBrush, emptyBorderPen, rrect);
+                    // Top glass specular sheen line
                     context.DrawLine(glassHighlightPen, new Point(x + radius, y + 0.8), new Point(x + cell - radius, y + 0.8));
                 }
 
