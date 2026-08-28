@@ -174,6 +174,7 @@ public class DownloadService : IDownloadService
                     }
                 }
 
+                meta.Domain = uri.Host;
                 meta.FileName = string.IsNullOrWhiteSpace(detectedName) ? "download.bin" : detectedName;
                 Logger.Info($"[METADATA DETECTED] File: '{meta.FileName}' | Size: {meta.FormattedSize} | Type: {meta.ContentType} | Resumable: {meta.IsResumable}");
             }

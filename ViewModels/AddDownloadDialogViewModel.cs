@@ -4,6 +4,9 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Avalonia;
+using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Platform.Storage;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -47,7 +50,7 @@ public partial class AddDownloadDialogViewModel : ViewModelBase
     private bool _isFetchingMetadata;
 
     [ObservableProperty]
-    private string _detectedInfoBadge = string.Empty;
+    private FileMetadata? _currentMetadata;
 
     [ObservableProperty]
     private bool _hasDetectedInfo;
@@ -67,8 +70,8 @@ public partial class AddDownloadDialogViewModel : ViewModelBase
     {
         HasError = false;
         StatusMessage = string.Empty;
-        DetectedInfoBadge = string.Empty;
         HasDetectedInfo = false;
+        CurrentMetadata = null;
 
         var urls = ExtractValidUrls(value);
         DetectedUrlsCount = urls.Count;
@@ -79,7 +82,11 @@ public partial class AddDownloadDialogViewModel : ViewModelBase
         }
         else if (urls.Count > 1)
         {
-            DetectedInfoBadge = $"Batch: {urls.Count} URLs queued";
+            CurrentMetadata = new FileMetadata
+            {
+                FileName = $"Batch: {urls.Count} files",
+                Domain = "Multiple sources"
+            };
             HasDetectedInfo = true;
             CustomFileName = string.Empty;
         }
@@ -96,7 +103,6 @@ public partial class AddDownloadDialogViewModel : ViewModelBase
         var ct = _probeCts.Token;
 
         IsFetchingMetadata = true;
-        StatusMessage = "Fetching file name and size from server...";
 
         Task.Run(async () =>
         {
@@ -109,19 +115,9 @@ public partial class AddDownloadDialogViewModel : ViewModelBase
                     Dispatcher.UIThread.Post(() =>
                     {
                         IsFetchingMetadata = false;
-                        StatusMessage = string.Empty;
                         CustomFileName = meta.FileName;
-
-                        var infoParts = new List<string>();
-                        if (meta.FileSize > 0) infoParts.Add(meta.FormattedSize);
-                        if (!string.IsNullOrEmpty(meta.ContentType)) infoParts.Add(meta.ContentType);
-                        if (meta.IsResumable) infoParts.Add("Resumable");
-
-                        if (infoParts.Count > 0)
-                        {
-                            DetectedInfoBadge = string.Join(" • ", infoParts);
-                            HasDetectedInfo = true;
-                        }
+                        CurrentMetadata = meta;
+                        HasDetectedInfo = true;
                     });
                 }
             }
@@ -137,6 +133,37 @@ public partial class AddDownloadDialogViewModel : ViewModelBase
                 }
             }
         }, ct);
+    }
+
+    [RelayCommand]
+    private async Task BrowseFolderAsync()
+    {
+        try
+        {
+            if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop &&
+                desktop.MainWindow?.StorageProvider is { } storage)
+            {
+                var folders = await storage.OpenFolderPickerAsync(new FolderPickerOpenOptions
+                {
+                    Title = "Select Destination Download Folder",
+                    AllowMultiple = false
+                });
+
+                if (folders.Count > 0)
+                {
+                    var selectedPath = folders[0].TryGetLocalPath();
+                    if (!string.IsNullOrWhiteSpace(selectedPath))
+                    {
+                        SaveDirectory = selectedPath;
+                        Logger.Info($"[USER ACTION] Selected download directory: {selectedPath}");
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.Warn($"Folder picker failed: {ex.Message}");
+        }
     }
 
     [RelayCommand]
