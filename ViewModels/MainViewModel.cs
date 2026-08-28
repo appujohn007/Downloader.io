@@ -89,21 +89,7 @@ public partial class MainViewModel : ViewModelBase
 
     private void InitializeDefaultDownloads()
     {
-        var defaultDir = _fileService.GetDefaultDownloadDirectory();
-
-        var sample1 = new DownloadItem
-        {
-            Url = "https://speed.hetzner.de/100MB.bin",
-            FileName = "100MB_Benchmark_Test.bin",
-            SaveDirectory = defaultDir,
-            TotalBytes = 104857600,
-            DownloadedBytes = 0,
-            ProgressPercentage = 0,
-            Status = DownloadStatus.Queued,
-            CreatedAt = DateTime.Now
-        };
-        sample1.NotifyProgressChanged();
-        AllDownloads.Add(sample1);
+        // Start with clean empty download queue
     }
 
     partial void OnSearchQueryChanged(string value) => ApplyFilter();
