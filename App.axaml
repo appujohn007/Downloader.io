@@ -29,6 +29,8 @@
                     <SolidColorBrush x:Key="ProgressFillBrush" Color="#2563EB" />
                     <SolidColorBrush x:Key="CaptionBtnHoverBrush" Color="#E5E7EB" />
                     <SolidColorBrush x:Key="ModalOverlayBrush" Color="#66000000" />
+                    <SolidColorBrush x:Key="GlassOverlayBgBrush" Color="#F2FFFFFF" />
+                    <SolidColorBrush x:Key="GlassOverlayBorderBrush" Color="#E2E8F0" />
                 </ResourceDictionary>
 
                 <!-- MINIMAL LCD DARK PALETTE -->
@@ -49,6 +51,8 @@
                     <SolidColorBrush x:Key="ProgressFillBrush" Color="#3B82F6" />
                     <SolidColorBrush x:Key="CaptionBtnHoverBrush" Color="#20232C" />
                     <SolidColorBrush x:Key="ModalOverlayBrush" Color="#B3000000" />
+                    <SolidColorBrush x:Key="GlassOverlayBgBrush" Color="#F2101217" />
+                    <SolidColorBrush x:Key="GlassOverlayBorderBrush" Color="#222530" />
                 </ResourceDictionary>
             </ResourceDictionary.ThemeDictionaries>
         </ResourceDictionary>

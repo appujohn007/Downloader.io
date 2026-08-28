@@ -396,8 +396,8 @@
 
                         <!-- Sleek Glassmorphic Fetching Overlay -->
                         <Border IsVisible="{Binding IsFetchingMetadata}"
-                                Background="#E6101217"
-                                BorderBrush="{DynamicResource BorderBrushCustom}"
+                                Background="{DynamicResource GlassOverlayBgBrush}"
+                                BorderBrush="{DynamicResource GlassOverlayBorderBrush}"
                                 BorderThickness="1"
                                 CornerRadius="6"
                                 HorizontalAlignment="Stretch"
