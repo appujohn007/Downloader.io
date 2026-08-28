@@ -7,7 +7,10 @@ namespace DownloaderApp.Models;
 
 public partial class DownloadItem : ObservableObject
 {
-    public Guid Id { get; } = Guid.NewGuid();
+    private static int _nextPaletteCounter = Random.Shared.Next(0, 10);
+
+    [ObservableProperty]
+    private int _paletteIndex = Interlocked.Increment(ref _nextPaletteCounter);
 
     [ObservableProperty]
     private string _url = string.Empty;

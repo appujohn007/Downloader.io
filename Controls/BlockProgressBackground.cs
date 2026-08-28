@@ -20,8 +20,8 @@ public class BlockProgressBackground : Control
     public static readonly StyledProperty<bool> IsCompletedProperty =
         AvaloniaProperty.Register<BlockProgressBackground, bool>(nameof(IsCompleted), false);
 
-    public static readonly StyledProperty<string?> PaletteSeedProperty =
-        AvaloniaProperty.Register<BlockProgressBackground, string?>(nameof(PaletteSeed));
+    public static readonly StyledProperty<int> PaletteIndexProperty =
+        AvaloniaProperty.Register<BlockProgressBackground, int>(nameof(PaletteIndex), 0);
 
     public static readonly StyledProperty<double> CellSizeProperty =
         AvaloniaProperty.Register<BlockProgressBackground, double>(nameof(CellSize), 8.0);
@@ -37,25 +37,32 @@ public class BlockProgressBackground : Control
 
     private double _animatedProgress = 0.0;
     private bool _isInitialized = false;
-    private double _shimmerPhase = 0.0;
-    private double _windPhase = 0.0;
+    private double _animPhase = 0.0;
     private readonly DispatcherTimer _animTimer;
 
-    // 6 distinct, vibrant gradient palettes
+    // 10 distinct, vibrant gradient palettes
     private static readonly (Color Stop0, Color Stop1, Color Stop2)[] Palettes = new[]
     {
-        // 0: Cyber Cyan -> Azure -> Indigo
-        (Color.FromRgb(6, 182, 212), Color.FromRgb(59, 130, 246), Color.FromRgb(99, 102, 241)),
-        // 1: Neon Emerald -> Mint -> Cyan
-        (Color.FromRgb(16, 185, 129), Color.FromRgb(20, 184, 166), Color.FromRgb(6, 182, 212)),
-        // 2: Sunset Amber -> Tangerine -> Rose
+        // 0: Cyber Cyan -> Vivid Blue -> Purple
+        (Color.FromRgb(0, 210, 255), Color.FromRgb(59, 130, 246), Color.FromRgb(147, 51, 234)),
+        // 1: Neon Emerald -> Teal -> Electric Mint
+        (Color.FromRgb(16, 185, 129), Color.FromRgb(20, 184, 166), Color.FromRgb(52, 211, 153)),
+        // 2: Sunset Amber -> Fire Orange -> Crimson Rose
         (Color.FromRgb(245, 158, 11), Color.FromRgb(249, 115, 22), Color.FromRgb(244, 63, 94)),
-        // 3: Electric Violet -> Magenta -> Hot Pink
-        (Color.FromRgb(139, 92, 246), Color.FromRgb(217, 70, 239), Color.FromRgb(236, 72, 153)),
-        // 4: Hyper Lime -> Green -> Teal
+        // 3: Ultraviolet -> Magenta -> Neon Pink
+        (Color.FromRgb(139, 92, 246), Color.FromRgb(217, 70, 239), Color.FromRgb(244, 114, 182)),
+        // 4: Electric Lime -> Mint -> Seafoam
         (Color.FromRgb(132, 204, 22), Color.FromRgb(16, 185, 129), Color.FromRgb(6, 182, 212)),
-        // 5: Sapphire Blue -> Sky -> Violet
-        (Color.FromRgb(37, 99, 235), Color.FromRgb(56, 189, 248), Color.FromRgb(139, 92, 246)),
+        // 5: Sapphire Blue -> Azure Sky -> Iris
+        (Color.FromRgb(37, 99, 235), Color.FromRgb(56, 189, 248), Color.FromRgb(129, 140, 248)),
+        // 6: Crimson Flame -> Coral -> Golden Sun
+        (Color.FromRgb(239, 68, 68), Color.FromRgb(251, 146, 60), Color.FromRgb(250, 204, 21)),
+        // 7: Aurora Aqua -> Turquoise -> Deep Ocean
+        (Color.FromRgb(45, 212, 191), Color.FromRgb(14, 165, 233), Color.FromRgb(99, 102, 241)),
+        // 8: Cyber Fuchsia -> Purple -> Midnight Blue
+        (Color.FromRgb(236, 72, 153), Color.FromRgb(168, 85, 247), Color.FromRgb(59, 130, 246)),
+        // 9: Peach Blossom -> Rose -> Violet
+        (Color.FromRgb(251, 113, 133), Color.FromRgb(244, 63, 94), Color.FromRgb(192, 132, 252)),
     };
 
     static BlockProgressBackground()
@@ -66,7 +73,7 @@ public class BlockProgressBackground : Control
             IsActiveProperty,
             IsConnectingProperty,
             IsCompletedProperty,
-            PaletteSeedProperty,
+            PaletteIndexProperty,
             CellSizeProperty,
             CellGapProperty,
             CellCornerRadiusProperty,
@@ -106,10 +113,10 @@ public class BlockProgressBackground : Control
         set => SetValue(IsCompletedProperty, value);
     }
 
-    public string? PaletteSeed
+    public int PaletteIndex
     {
-        get => GetValue(PaletteSeedProperty);
-        set => SetValue(PaletteSeedProperty, value);
+        get => GetValue(PaletteIndexProperty);
+        set => SetValue(PaletteIndexProperty, value);
     }
 
     public double CellSize
@@ -184,7 +191,7 @@ public class BlockProgressBackground : Control
     {
         bool needsRedraw = false;
 
-        // Smooth progress interpolation without resetting
+        // Smooth continuous progress interpolation without resetting
         double target = Math.Clamp(Progress, 0.0, 100.0);
         double diff = target - _animatedProgress;
 
@@ -199,17 +206,10 @@ public class BlockProgressBackground : Control
             needsRedraw = true;
         }
 
-        // Active download traveling shimmer wave
-        if (IsActive && !IsConnecting)
+        // Active download traveling shimmer / gentle connecting pulse
+        if (IsActive || IsConnecting)
         {
-            _shimmerPhase = (_shimmerPhase + 0.06) % (Math.PI * 2.0);
-            needsRedraw = true;
-        }
-
-        // Connecting mode passing wind wave
-        if (IsConnecting)
-        {
-            _windPhase = (_windPhase + 0.08) % (Math.PI * 2.0);
+            _animPhase = (_animPhase + 0.05) % (Math.PI * 2.0);
             needsRedraw = true;
         }
 
@@ -250,18 +250,18 @@ public class BlockProgressBackground : Control
         int filledCount = (int)Math.Floor(exactFilled);
         double fractionalCell = exactFilled - filledCount;
 
-        // Pick palette based on PaletteSeed hash
-        int paletteIndex = 0;
-        if (!string.IsNullOrEmpty(PaletteSeed))
+        // Select palette cleanly from PaletteIndex
+        int palIdx = Math.Abs(PaletteIndex) % Palettes.Length;
+        var currentPalette = Palettes[palIdx];
+
+        // Connecting mode gentle breathing pulse
+        byte emptyBorderAlpha = 34;
+        if (IsConnecting)
         {
-            paletteIndex = Math.Abs(PaletteSeed.GetHashCode()) % Palettes.Length;
+            emptyBorderAlpha = (byte)Math.Clamp(34 + 20 * Math.Sin(_animPhase), 20, 60);
         }
-        var currentPalette = Palettes[paletteIndex];
 
-        // Clear, crisp unfilled cell border (well-visible glass grid matrix)
-        var emptyPen = new Pen(new SolidColorBrush(Color.FromArgb(38, 255, 255, 255)), 0.85);
-
-        // Specular highlight brush for glass sheen effect
+        var emptyPen = new Pen(new SolidColorBrush(Color.FromArgb(emptyBorderAlpha, 255, 255, 255)), 0.85);
         var glassHighlightPen = new Pen(new SolidColorBrush(Color.FromArgb(36, 255, 255, 255)), 0.7);
 
         int cellIndex = 0;
@@ -278,34 +278,14 @@ public class BlockProgressBackground : Control
                 double horizontalRatio = (x + cell * 0.5) / bounds.Width;
                 var baseColor = GetPaletteGradientColor(currentPalette, horizontalRatio);
 
-                if (IsConnecting)
-                {
-                    // Luminous wind wave passing across unfilled cells during connecting mode
-                    double waveDist = Math.Sin(_windPhase - (c * 0.22) + (r * 0.08));
-                    if (waveDist > 0)
-                    {
-                        byte windAlpha = (byte)Math.Clamp(waveDist * 40, 0, 40);
-                        byte windBorderAlpha = (byte)Math.Clamp(38 + (waveDist * 80), 38, 120);
-
-                        var windFillBrush = new SolidColorBrush(Color.FromArgb(windAlpha, baseColor.R, baseColor.G, baseColor.B));
-                        var windBorderPen = new Pen(new SolidColorBrush(Color.FromArgb(windBorderAlpha, baseColor.R, baseColor.G, baseColor.B)), 0.9);
-
-                        context.DrawRectangle(windFillBrush, windBorderPen, rrect);
-                    }
-                    else
-                    {
-                        context.DrawRectangle(null, emptyPen, rrect);
-                    }
-                }
-                else if (cellIndex < filledCount)
+                if (!IsConnecting && cellIndex < filledCount)
                 {
                     // Fully filled glass cell with horizontal liquid gradient
                     double pulseAlpha = 1.0;
                     if (IsActive)
                     {
-                        // Subtle traveling liquid shimmer wave
-                        double wave = Math.Sin(_shimmerPhase + (c * 0.25) - (r * 0.15));
-                        pulseAlpha = 0.85 + (wave * 0.25);
+                        double wave = Math.Sin(_animPhase + (c * 0.22) - (r * 0.12));
+                        pulseAlpha = 0.88 + (wave * 0.22);
                     }
 
                     byte fillAlpha = (byte)Math.Clamp(34 * pulseAlpha, 18, 55);
@@ -319,7 +299,7 @@ public class BlockProgressBackground : Control
                     // Top glass specular sheen line
                     context.DrawLine(glassHighlightPen, new Point(x + radius, y + 0.8), new Point(x + cell - radius, y + 0.8));
                 }
-                else if (cellIndex == filledCount && fractionalCell > 0.05)
+                else if (!IsConnecting && cellIndex == filledCount && fractionalCell > 0.05)
                 {
                     // Smoothly transitioning boundary cell
                     byte fillAlpha = (byte)Math.Clamp(34 * fractionalCell, 6, 45);

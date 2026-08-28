@@ -212,7 +212,7 @@
                                                 IsActive="{Binding IsActive}"
                                                 IsConnecting="{Binding IsConnecting}"
                                                 IsCompleted="{Binding IsCompleted}"
-                                                PaletteSeed="{Binding FileName}"
+                                                PaletteIndex="{Binding PaletteIndex}"
                                                 HorizontalAlignment="Stretch"
                                                 VerticalAlignment="Stretch"
                                                 Margin="-14,-10"
