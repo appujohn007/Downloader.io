@@ -72,15 +72,20 @@ public partial class DownloadItem : ObservableObject
     {
         get
         {
-            if (Status != DownloadStatus.Downloading || SpeedBytesPerSec <= 0 || TotalBytes <= 0)
+            if (Status != DownloadStatus.Downloading || SpeedBytesPerSec <= 1024 || TotalBytes <= 0)
                 return string.Empty;
 
             var remainingBytes = TotalBytes - DownloadedBytes;
             if (remainingBytes <= 0) return "Finishing...";
 
             var secondsRemaining = (double)remainingBytes / SpeedBytesPerSec;
+            if (secondsRemaining <= 0) return "Finishing...";
+            if (secondsRemaining > 86400 * 7) return "> 7 days left";
+
             var timeSpan = TimeSpan.FromSeconds(secondsRemaining);
 
+            if (timeSpan.TotalHours >= 24)
+                return $"{(int)timeSpan.TotalDays}d {timeSpan.Hours}h left";
             if (timeSpan.TotalHours >= 1)
                 return $"{(int)timeSpan.TotalHours}h {timeSpan.Minutes}m left";
             if (timeSpan.TotalMinutes >= 1)
@@ -105,6 +110,22 @@ public partial class DownloadItem : ObservableObject
     public bool CanPause => Status == DownloadStatus.Downloading || Status == DownloadStatus.Connecting;
     public bool CanResume => Status == DownloadStatus.Paused || Status == DownloadStatus.Failed;
     public bool IsCompleted => Status == DownloadStatus.Completed;
+
+    public void UpdateProgressMetrics(long downloaded, long total, double progressPct, double smoothedSpeed, bool updateSpeedDisplay)
+    {
+        DownloadedBytes = downloaded;
+        if (total > 0) TotalBytes = total;
+        ProgressPercentage = progressPct;
+        
+        OnPropertyChanged(nameof(FormattedSize));
+
+        if (updateSpeedDisplay)
+        {
+            SpeedBytesPerSec = smoothedSpeed;
+            OnPropertyChanged(nameof(FormattedSpeed));
+            OnPropertyChanged(nameof(FormattedEta));
+        }
+    }
 
     public void NotifyProgressChanged()
     {

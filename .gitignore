@@ -24,3 +24,14 @@ bld/
 *.rsuser
 *.suo
 *.userprefs
+
+## Downloaded test files
+*.mkv
+*.mp4
+*.zip
+*.tar
+*.gz
+*.bin
+*.part
+*.download
+

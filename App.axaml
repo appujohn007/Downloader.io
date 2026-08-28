@@ -26,8 +26,12 @@
                     <SolidColorBrush x:Key="AccentBrush" Color="#2563EB" />
                     <SolidColorBrush x:Key="AccentHoverBrush" Color="#1D4ED8" />
                     <SolidColorBrush x:Key="AccentSubtleBrush" Color="#EFF6FF" />
-                    <SolidColorBrush x:Key="ProgressTrackBrush" Color="#E5E7EB" />
-                    <SolidColorBrush x:Key="ProgressFillBrush" Color="#2563EB" />
+                    <SolidColorBrush x:Key="ProgressTrackBrush" Color="#E5E9F0" />
+                    <LinearGradientBrush x:Key="ProgressFillBrush" StartPoint="0%,50%" EndPoint="100%,50%">
+                        <GradientStop Color="#0284C7" Offset="0.0" />
+                        <GradientStop Color="#2563EB" Offset="0.5" />
+                        <GradientStop Color="#4F46E5" Offset="1.0" />
+                    </LinearGradientBrush>
                     <SolidColorBrush x:Key="CaptionBtnHoverBrush" Color="#E5E7EB" />
                     <SolidColorBrush x:Key="ModalOverlayBrush" Color="#66000000" />
                     <SolidColorBrush x:Key="GlassOverlayBgBrush" Color="#F2FFFFFF" />
@@ -50,8 +54,12 @@
                     <SolidColorBrush x:Key="AccentBrush" Color="#3B82F6" />
                     <SolidColorBrush x:Key="AccentHoverBrush" Color="#60A5FA" />
                     <SolidColorBrush x:Key="AccentSubtleBrush" Color="#131F37" />
-                    <SolidColorBrush x:Key="ProgressTrackBrush" Color="#20222A" />
-                    <SolidColorBrush x:Key="ProgressFillBrush" Color="#3B82F6" />
+                    <SolidColorBrush x:Key="ProgressTrackBrush" Color="#181B22" />
+                    <LinearGradientBrush x:Key="ProgressFillBrush" StartPoint="0%,50%" EndPoint="100%,50%">
+                        <GradientStop Color="#06B6D4" Offset="0.0" />
+                        <GradientStop Color="#3B82F6" Offset="0.5" />
+                        <GradientStop Color="#6366F1" Offset="1.0" />
+                    </LinearGradientBrush>
                     <SolidColorBrush x:Key="CaptionBtnHoverBrush" Color="#20232C" />
                     <SolidColorBrush x:Key="ModalOverlayBrush" Color="#B3000000" />
                     <SolidColorBrush x:Key="GlassOverlayBgBrush" Color="#F2101217" />
@@ -255,13 +263,27 @@
             <Setter Property="Background" Value="{DynamicResource InputBgBrush}" />
         </Style>
 
-        <!-- Minimal Thin ProgressBar -->
+        <!-- Liquid Smooth ProgressBar -->
         <Style Selector="ProgressBar.thin-progress">
-            <Setter Property="Height" Value="4" />
-            <Setter Property="CornerRadius" Value="2" />
+            <Setter Property="Height" Value="6" />
+            <Setter Property="CornerRadius" Value="3" />
             <Setter Property="Background" Value="{DynamicResource ProgressTrackBrush}" />
             <Setter Property="Foreground" Value="{DynamicResource ProgressFillBrush}" />
             <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="ClipToBounds" Value="True" />
+            <Setter Property="Transitions">
+                <Transitions>
+                    <DoubleTransition Property="Value" Duration="0:0:0.25" Easing="CubicEaseOut" />
+                </Transitions>
+            </Setter>
+        </Style>
+        <Style Selector="ProgressBar.thin-progress /template/ Border#PART_Indicator">
+            <Setter Property="CornerRadius" Value="3" />
+            <Setter Property="ClipToBounds" Value="True" />
+        </Style>
+        <Style Selector="ProgressBar.thin-progress /template/ Border#PART_Track">
+            <Setter Property="CornerRadius" Value="3" />
+            <Setter Property="ClipToBounds" Value="True" />
         </Style>
 
         <!-- Pulsing Indicator Animation -->

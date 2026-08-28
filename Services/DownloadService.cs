@@ -352,6 +352,9 @@ public class DownloadService : IDownloadService
         CancellationToken ct,
         long totalLength = -1)
     {
+        long currentDownloadedBytes = initialBytes;
+        long currentTotalBytes = totalLength > 0 ? totalLength : item.TotalBytes;
+
         item.Status = DownloadStatus.Downloading;
         item.DownloadedBytes = initialBytes;
         if (totalLength > 0)
@@ -372,46 +375,76 @@ public class DownloadService : IDownloadService
 
         var buffer = new byte[81920];
         int bytesRead;
-        long bytesSinceLastSpeedCalc = 0;
-        var stopwatch = Stopwatch.StartNew();
-        var lastUiUpdate = Stopwatch.StartNew();
+        long bytesSinceLastSample = 0;
+        double smoothedSpeed = 0.0;
+
+        var speedSampleTimer = Stopwatch.StartNew();
+        var uiProgressTimer = Stopwatch.StartNew();
+        var uiSpeedDisplayTimer = Stopwatch.StartNew();
         var lastConsoleLog = Stopwatch.StartNew();
 
         while ((bytesRead = await contentStream.ReadAsync(buffer, 0, buffer.Length, ct)) > 0)
         {
             await fileStream.WriteAsync(buffer, 0, bytesRead, ct);
 
-            item.DownloadedBytes += bytesRead;
-            bytesSinceLastSpeedCalc += bytesRead;
+            currentDownloadedBytes += bytesRead;
+            bytesSinceLastSample += bytesRead;
 
-            if (item.TotalBytes > 0)
+            // Sample speed every 250ms with Exponential Moving Average (EMA)
+            if (speedSampleTimer.ElapsedMilliseconds >= 250)
             {
-                item.ProgressPercentage = Math.Clamp(((double)item.DownloadedBytes / item.TotalBytes) * 100.0, 0, 100);
-            }
-
-            // Calculate speed every 400ms
-            if (stopwatch.ElapsedMilliseconds >= 400)
-            {
-                var elapsedSeconds = stopwatch.Elapsed.TotalSeconds;
-                if (elapsedSeconds > 0)
+                var elapsedSec = speedSampleTimer.Elapsed.TotalSeconds;
+                if (elapsedSec > 0)
                 {
-                    item.SpeedBytesPerSec = bytesSinceLastSpeedCalc / elapsedSeconds;
+                    var instantSpeed = bytesSinceLastSample / elapsedSec;
+                    if (smoothedSpeed <= 0)
+                    {
+                        smoothedSpeed = instantSpeed;
+                    }
+                    else
+                    {
+                        // EMA smoothing factor: 0.25 (stable yet responsive)
+                        smoothedSpeed = (0.25 * instantSpeed) + (0.75 * smoothedSpeed);
+                    }
                 }
-                bytesSinceLastSpeedCalc = 0;
-                stopwatch.Restart();
+                bytesSinceLastSample = 0;
+                speedSampleTimer.Restart();
             }
 
-            // Dispatch UI update every 200ms
-            if (lastUiUpdate.ElapsedMilliseconds >= 200)
+            // Multi-tiered UI update cadence:
+            // 1. Progress Bar & Downloaded bytes: update every ~100ms for smooth continuous fluid flow
+            // 2. Speed text & ETA: update every ~700ms for human readability without flickering
+            if (uiProgressTimer.ElapsedMilliseconds >= 100)
             {
-                UpdateUi(item);
-                lastUiUpdate.Restart();
+                double progressPct = 0;
+                if (currentTotalBytes > 0)
+                {
+                    progressPct = Math.Clamp(((double)currentDownloadedBytes / currentTotalBytes) * 100.0, 0, 100);
+                }
+
+                bool updateSpeedDisplay = uiSpeedDisplayTimer.ElapsedMilliseconds >= 700;
+                if (updateSpeedDisplay)
+                {
+                    uiSpeedDisplayTimer.Restart();
+                }
+
+                long snapDownloaded = currentDownloadedBytes;
+                long snapTotal = currentTotalBytes;
+                double snapSpeed = smoothedSpeed;
+
+                Dispatcher.UIThread.Post(() =>
+                {
+                    item.UpdateProgressMetrics(snapDownloaded, snapTotal, progressPct, snapSpeed, updateSpeedDisplay);
+                }, DispatcherPriority.Normal);
+
+                uiProgressTimer.Restart();
             }
 
             // Periodic terminal log every 3 seconds
             if (lastConsoleLog.ElapsedMilliseconds >= 3000)
             {
-                Logger.Download($"[PROGRESS] '{item.FileName}': {item.ProgressPercentage:0.0}% | {DownloadItem.FormatBytes(item.DownloadedBytes)} / {DownloadItem.FormatBytes(item.TotalBytes)} | {DownloadItem.FormatBytes((long)item.SpeedBytesPerSec)}/s");
+                double progressPct = currentTotalBytes > 0 ? ((double)currentDownloadedBytes / currentTotalBytes) * 100.0 : 0;
+                Logger.Download($"[PROGRESS] '{item.FileName}': {progressPct:0.0}% | {DownloadItem.FormatBytes(currentDownloadedBytes)} / {DownloadItem.FormatBytes(currentTotalBytes)} | {DownloadItem.FormatBytes((long)smoothedSpeed)}/s");
                 lastConsoleLog.Restart();
             }
         }
@@ -424,8 +457,9 @@ public class DownloadService : IDownloadService
         item.ProgressPercentage = 100;
         if (item.TotalBytes <= 0)
         {
-            item.TotalBytes = item.DownloadedBytes;
+            item.TotalBytes = currentDownloadedBytes;
         }
+        item.DownloadedBytes = item.TotalBytes;
 
         UpdateUi(item);
         Logger.Success($"[COMPLETED] Successfully downloaded '{item.FileName}' ({DownloadItem.FormatBytes(item.DownloadedBytes)}) to '{targetFilePath}'");
