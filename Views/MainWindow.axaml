@@ -140,7 +140,7 @@
                     </StackPanel>
 
                     <!-- Bottom Status Text -->
-                    <TextBlock Grid.Row="2" Text="Downloader.io" FontSize="10" Foreground="{DynamicResource TextMutedBrush}" HorizontalAlignment="Center" Margin="0,8,0,0" />
+                    <TextBlock Grid.Row="2" Text="Ctrl+V to paste link" FontSize="10" Foreground="{DynamicResource TextMutedBrush}" HorizontalAlignment="Center" Margin="0,8,0,0" />
                 </Grid>
             </Border>
 
@@ -291,7 +291,7 @@
                     <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="10"
                                 IsVisible="{Binding !DisplayedDownloads.Count}">
                         <TextBlock Text="No active downloads" FontSize="13" FontWeight="Medium" Foreground="{DynamicResource TextPrimaryBrush}" HorizontalAlignment="Center" />
-                        <TextBlock Text="Click '+ Add' or 'Paste' to start downloading a file." FontSize="11" Foreground="{DynamicResource TextMutedBrush}" HorizontalAlignment="Center" />
+                        <TextBlock Text="Press Ctrl+V to paste link from clipboard or click '+ Add'." FontSize="11" Foreground="{DynamicResource TextMutedBrush}" HorizontalAlignment="Center" />
                     </StackPanel>
                 </Grid>
             </Grid>
@@ -349,10 +349,33 @@
                                  Watermark="https://example.com/file.zip" />
                     </StackPanel>
 
-                    <!-- File Name -->
+                    <!-- File Name & Dynamic Metadata Info Badge -->
                     <StackPanel Spacing="4">
-                        <TextBlock Text="File Name (optional):" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" />
-                        <TextBox Classes="minimal-input" Text="{Binding CustomFileName}" Watermark="Auto-detected from URL..." />
+                        <Grid ColumnDefinitions="*, Auto">
+                            <TextBlock Grid.Column="0" Text="File Name:" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" />
+
+                            <!-- Fetching Spinner / Badge -->
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6">
+                                <TextBlock Text="⚡ Probing headers..."
+                                           IsVisible="{Binding IsFetchingMetadata}"
+                                           FontSize="10"
+                                           Foreground="{DynamicResource AccentBrush}"
+                                           VerticalAlignment="Center" />
+
+                                <Border IsVisible="{Binding HasDetectedInfo}"
+                                        Background="{DynamicResource AccentSubtleBrush}"
+                                        BorderBrush="{DynamicResource BorderBrushCustom}"
+                                        BorderThickness="1"
+                                        CornerRadius="4"
+                                        Padding="6,1">
+                                    <TextBlock Text="{Binding DetectedInfoBadge}"
+                                               FontSize="10"
+                                               FontWeight="SemiBold"
+                                               Foreground="{DynamicResource AccentBrush}" />
+                                </Border>
+                            </StackPanel>
+                        </Grid>
+                        <TextBox Classes="minimal-input" Text="{Binding CustomFileName}" Watermark="Auto-detected from server headers..." />
                     </StackPanel>
 
                     <!-- Save Directory -->
@@ -366,7 +389,7 @@
 
                     <!-- Actions -->
                     <Grid ColumnDefinitions="*, Auto, Auto" Margin="0,4,0,0">
-                        <TextBlock Grid.Column="0" Text="{Binding StatusMessage}" IsVisible="{Binding StatusMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" Foreground="#EF4444" FontSize="11" VerticalAlignment="Center" />
+                        <TextBlock Grid.Column="0" Text="{Binding StatusMessage}" IsVisible="{Binding StatusMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" Foreground="{DynamicResource TextMutedBrush}" FontSize="11" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
                         <Button Grid.Column="1" Classes="ghost-btn" Command="{Binding CancelCommand}" Content="Cancel" Margin="0,0,6,0" Padding="12,6" />
                         <Button Grid.Column="2" Classes="primary-btn" Command="{Binding ConfirmCommand}" Content="Download" Padding="14,6" />
                     </Grid>

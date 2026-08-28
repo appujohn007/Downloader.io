@@ -1,8 +1,10 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Threading;
@@ -18,6 +20,7 @@ public interface IDownloadService
     void CancelDownload(DownloadItem item);
     string ExtractFileNameFromUrl(string url);
     Task<long> ProbeFileSizeAsync(string url, CancellationToken ct = default);
+    Task<FileMetadata> ProbeMetadataAsync(string url, CancellationToken ct = default);
 }
 
 public class DownloadService : IDownloadService
@@ -32,9 +35,161 @@ public class DownloadService : IDownloadService
         Timeout = TimeSpan.FromHours(24)
     };
 
+    private static readonly Dictionary<string, string> MimeExtensions = new(StringComparer.OrdinalIgnoreCase)
+    {
+        { "application/zip", ".zip" },
+        { "application/x-zip-compressed", ".zip" },
+        { "application/x-rar-compressed", ".rar" },
+        { "application/x-7z-compressed", ".7z" },
+        { "application/x-tar", ".tar" },
+        { "application/gzip", ".gz" },
+        { "application/pdf", ".pdf" },
+        { "application/json", ".json" },
+        { "application/octet-stream", ".bin" },
+        { "video/mp4", ".mp4" },
+        { "video/x-matroska", ".mkv" },
+        { "video/webm", ".webm" },
+        { "video/quicktime", ".mov" },
+        { "audio/mpeg", ".mp3" },
+        { "audio/wav", ".wav" },
+        { "audio/flac", ".flac" },
+        { "audio/aac", ".aac" },
+        { "image/png", ".png" },
+        { "image/jpeg", ".jpg" },
+        { "image/gif", ".gif" },
+        { "image/webp", ".webp" },
+        { "image/svg+xml", ".svg" },
+        { "text/plain", ".txt" },
+        { "text/html", ".html" }
+    };
+
     static DownloadService()
     {
         HttpClient.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36 Downloader.io/1.0");
+    }
+
+    public async Task<FileMetadata> ProbeMetadataAsync(string url, CancellationToken ct = default)
+    {
+        var meta = new FileMetadata { Url = url };
+
+        if (string.IsNullOrWhiteSpace(url) || !Uri.TryCreate(url, UriKind.Absolute, out var uri))
+        {
+            meta.ErrorMessage = "Invalid URL";
+            meta.FileName = "download.bin";
+            return meta;
+        }
+
+        try
+        {
+            Logger.Debug($"[METADATA] Probing headers for: {url}");
+
+            HttpResponseMessage? response = null;
+
+            // 1. Try HEAD request first
+            try
+            {
+                using var headReq = new HttpRequestMessage(HttpMethod.Head, url);
+                response = await HttpClient.SendAsync(headReq, HttpCompletionOption.ResponseHeadersRead, ct);
+            }
+            catch (Exception ex)
+            {
+                Logger.Debug($"HEAD request failed ({ex.Message}), falling back to GET Range request...");
+            }
+
+            // 2. If HEAD request returned MethodNotAllowed (405) or failed, try GET with Range: 0-0
+            if (response == null || !response.IsSuccessStatusCode)
+            {
+                response?.Dispose();
+                using var getReq = new HttpRequestMessage(HttpMethod.Get, url);
+                getReq.Headers.Range = new RangeHeaderValue(0, 0);
+                response = await HttpClient.SendAsync(getReq, HttpCompletionOption.ResponseHeadersRead, ct);
+            }
+
+            using (response)
+            {
+                // Content Type
+                if (response.Content.Headers.ContentType?.MediaType != null)
+                {
+                    meta.ContentType = response.Content.Headers.ContentType.MediaType;
+                }
+
+                // Resumable check
+                meta.IsResumable = response.StatusCode == System.Net.HttpStatusCode.PartialContent ||
+                                  response.Headers.AcceptRanges.Contains("bytes");
+
+                // Content Length
+                if (response.Content.Headers.ContentRange?.Length.HasValue == true)
+                {
+                    meta.FileSize = response.Content.Headers.ContentRange.Length.Value;
+                }
+                else if (response.Content.Headers.ContentLength.HasValue)
+                {
+                    meta.FileSize = response.Content.Headers.ContentLength.Value;
+                }
+
+                // Filename from Content-Disposition header
+                string? detectedName = null;
+
+                if (response.Content.Headers.ContentDisposition != null)
+                {
+                    detectedName = response.Content.Headers.ContentDisposition.FileNameStar ??
+                                   response.Content.Headers.ContentDisposition.FileName;
+                }
+
+                // If not in parsed ContentDisposition, search raw header
+                if (string.IsNullOrWhiteSpace(detectedName) && response.Content.Headers.TryGetValues("Content-Disposition", out var values))
+                {
+                    var raw = string.Join(";", values);
+                    var matchStar = Regex.Match(raw, @"filename\*=UTF-8''([^;]+)", RegexOptions.IgnoreCase);
+                    if (matchStar.Success)
+                    {
+                        detectedName = Uri.UnescapeDataString(matchStar.Groups[1].Value);
+                    }
+                    else
+                    {
+                        var match = Regex.Match(raw, @"filename=[""']?([^""';]+)[""']?", RegexOptions.IgnoreCase);
+                        if (match.Success)
+                        {
+                            detectedName = match.Groups[1].Value;
+                        }
+                    }
+                }
+
+                // Fallback to effective final URI after redirects
+                if (string.IsNullOrWhiteSpace(detectedName))
+                {
+                    var finalUri = response.RequestMessage?.RequestUri ?? uri;
+                    detectedName = ExtractFileNameFromUrl(finalUri.AbsoluteUri);
+                }
+
+                // Clean detected name
+                detectedName = CleanFileName(detectedName);
+
+                // If extension is missing, check Content-Type MIME map
+                if (!Path.HasExtension(detectedName) && !string.IsNullOrEmpty(meta.ContentType))
+                {
+                    if (MimeExtensions.TryGetValue(meta.ContentType, out var ext))
+                    {
+                        detectedName += ext;
+                    }
+                }
+
+                meta.FileName = string.IsNullOrWhiteSpace(detectedName) ? "download.bin" : detectedName;
+                Logger.Info($"[METADATA DETECTED] File: '{meta.FileName}' | Size: {meta.FormattedSize} | Type: {meta.ContentType} | Resumable: {meta.IsResumable}");
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            meta.FileName = ExtractFileNameFromUrl(url);
+        }
+        catch (Exception ex)
+        {
+            Logger.Warn($"Metadata probe encountered error: {ex.Message}");
+            meta.FileName = ExtractFileNameFromUrl(url);
+            meta.ErrorMessage = ex.Message;
+        }
+
+        return meta;
     }
 
     public string ExtractFileNameFromUrl(string url)
@@ -49,12 +204,7 @@ public class DownloadService : IDownloadService
                 var name = Path.GetFileName(localPath);
                 if (!string.IsNullOrWhiteSpace(name))
                 {
-                    var invalid = Path.GetInvalidFileNameChars();
-                    foreach (var c in invalid)
-                    {
-                        name = name.Replace(c, '_');
-                    }
-                    return name;
+                    return CleanFileName(Uri.UnescapeDataString(name));
                 }
             }
         }
@@ -66,25 +216,24 @@ public class DownloadService : IDownloadService
         return "download.bin";
     }
 
+    private static string CleanFileName(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name)) return "download.bin";
+        name = name.Trim(' ', '"', '\'', '\t', '\r', '\n');
+
+        var invalid = Path.GetInvalidFileNameChars();
+        foreach (var c in invalid)
+        {
+            name = name.Replace(c, '_');
+        }
+
+        return name;
+    }
+
     public async Task<long> ProbeFileSizeAsync(string url, CancellationToken ct = default)
     {
-        try
-        {
-            Logger.Debug($"Probing file size via HTTP HEAD: {url}");
-            using var req = new HttpRequestMessage(HttpMethod.Head, url);
-            using var res = await HttpClient.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, ct);
-            if (res.IsSuccessStatusCode && res.Content.Headers.ContentLength.HasValue)
-            {
-                var length = res.Content.Headers.ContentLength.Value;
-                Logger.Info($"Probe result for {url}: {DownloadItem.FormatBytes(length)}");
-                return length;
-            }
-        }
-        catch (Exception ex)
-        {
-            Logger.Warn($"Probe failed for {url}: {ex.Message}");
-        }
-        return -1;
+        var meta = await ProbeMetadataAsync(url, ct);
+        return meta.FileSize;
     }
 
     public async Task StartDownloadAsync(DownloadItem item)
@@ -258,7 +407,7 @@ public class DownloadService : IDownloadService
                 lastUiUpdate.Restart();
             }
 
-            // Periodic terminal log every 3 seconds for clean terminal telemetry
+            // Periodic terminal log every 3 seconds
             if (lastConsoleLog.ElapsedMilliseconds >= 3000)
             {
                 Logger.Download($"[PROGRESS] '{item.FileName}': {item.ProgressPercentage:0.0}% | {DownloadItem.FormatBytes(item.DownloadedBytes)} / {DownloadItem.FormatBytes(item.TotalBytes)} | {DownloadItem.FormatBytes((long)item.SpeedBytesPerSec)}/s");

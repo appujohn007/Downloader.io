@@ -2,9 +2,12 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
+using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using DownloaderApp.Models;
 using DownloaderApp.Services;
 
 namespace DownloaderApp.ViewModels;
@@ -14,6 +17,7 @@ public partial class AddDownloadDialogViewModel : ViewModelBase
     private readonly IClipboardService _clipboardService;
     private readonly IFileService _fileService;
     private readonly IDownloadService _downloadService;
+    private CancellationTokenSource? _probeCts;
 
     public event Action<List<(string Url, string FileName, string SaveDir)>, bool>? OnConfirmed;
     public event Action? OnCanceled;
@@ -39,6 +43,15 @@ public partial class AddDownloadDialogViewModel : ViewModelBase
     [ObservableProperty]
     private int _detectedUrlsCount = 0;
 
+    [ObservableProperty]
+    private bool _isFetchingMetadata;
+
+    [ObservableProperty]
+    private string _detectedInfoBadge = string.Empty;
+
+    [ObservableProperty]
+    private bool _hasDetectedInfo;
+
     public AddDownloadDialogViewModel(
         IClipboardService clipboardService,
         IFileService fileService,
@@ -54,14 +67,76 @@ public partial class AddDownloadDialogViewModel : ViewModelBase
     {
         HasError = false;
         StatusMessage = string.Empty;
+        DetectedInfoBadge = string.Empty;
+        HasDetectedInfo = false;
 
         var urls = ExtractValidUrls(value);
         DetectedUrlsCount = urls.Count;
 
-        if (urls.Count == 1 && string.IsNullOrWhiteSpace(CustomFileName))
+        if (urls.Count == 1)
         {
-            CustomFileName = _downloadService.ExtractFileNameFromUrl(urls[0]);
+            FetchMetadataForUrl(urls[0]);
         }
+        else if (urls.Count > 1)
+        {
+            DetectedInfoBadge = $"Batch: {urls.Count} URLs queued";
+            HasDetectedInfo = true;
+            CustomFileName = string.Empty;
+        }
+        else
+        {
+            CustomFileName = string.Empty;
+        }
+    }
+
+    public void FetchMetadataForUrl(string url)
+    {
+        _probeCts?.Cancel();
+        _probeCts = new CancellationTokenSource();
+        var ct = _probeCts.Token;
+
+        IsFetchingMetadata = true;
+        StatusMessage = "Fetching file name and size from server...";
+
+        Task.Run(async () =>
+        {
+            try
+            {
+                var meta = await _downloadService.ProbeMetadataAsync(url, ct);
+
+                if (!ct.IsCancellationRequested)
+                {
+                    Dispatcher.UIThread.Post(() =>
+                    {
+                        IsFetchingMetadata = false;
+                        StatusMessage = string.Empty;
+                        CustomFileName = meta.FileName;
+
+                        var infoParts = new List<string>();
+                        if (meta.FileSize > 0) infoParts.Add(meta.FormattedSize);
+                        if (!string.IsNullOrEmpty(meta.ContentType)) infoParts.Add(meta.ContentType);
+                        if (meta.IsResumable) infoParts.Add("Resumable");
+
+                        if (infoParts.Count > 0)
+                        {
+                            DetectedInfoBadge = string.Join(" • ", infoParts);
+                            HasDetectedInfo = true;
+                        }
+                    });
+                }
+            }
+            catch
+            {
+                if (!ct.IsCancellationRequested)
+                {
+                    Dispatcher.UIThread.Post(() =>
+                    {
+                        IsFetchingMetadata = false;
+                        CustomFileName = _downloadService.ExtractFileNameFromUrl(url);
+                    });
+                }
+            }
+        }, ct);
     }
 
     [RelayCommand]
@@ -71,7 +146,6 @@ public partial class AddDownloadDialogViewModel : ViewModelBase
         if (clipboardUrls.Count > 0)
         {
             UrlInput = string.Join(Environment.NewLine, clipboardUrls);
-            StatusMessage = $"Pasted {clipboardUrls.Count} link{(clipboardUrls.Count > 1 ? "s" : "")} from clipboard";
         }
         else
         {
@@ -144,6 +218,7 @@ public partial class AddDownloadDialogViewModel : ViewModelBase
     [RelayCommand]
     private void Cancel()
     {
+        _probeCts?.Cancel();
         OnCanceled?.Invoke();
     }
 

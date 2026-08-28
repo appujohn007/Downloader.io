@@ -1,6 +1,7 @@
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using DownloaderApp.ViewModels;
 
 namespace DownloaderApp.Views;
 
@@ -30,11 +31,26 @@ public partial class MainWindow : Window
     {
         base.OnPointerPressed(e);
 
-        // Allow dragging window from top bar
+        // Allow dragging window from top 34px bar
         var point = e.GetCurrentPoint(this);
-        if (point.Position.Y <= 44 && e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
+        if (point.Position.Y <= 34 && e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
         {
             BeginMoveDrag(e);
+        }
+    }
+
+    protected override async void OnKeyDown(KeyEventArgs e)
+    {
+        base.OnKeyDown(e);
+
+        // Global Ctrl+V hotkey from homepage
+        if (e.KeyModifiers.HasFlag(KeyModifiers.Control) && e.Key == Key.V)
+        {
+            if (DataContext is MainViewModel vm && !vm.IsAddModalOpen)
+            {
+                e.Handled = true;
+                await vm.PasteFromClipboardCommand.ExecuteAsync(null);
+            }
         }
     }
 }
