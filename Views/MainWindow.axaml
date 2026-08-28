@@ -36,6 +36,7 @@
                 <!-- Center Live Stats (when downloading) -->
                 <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="10"
                             IsVisible="{Binding TotalActiveCount}">
+                    <Ellipse Width="6" Height="6" Fill="{DynamicResource AccentBrush}" VerticalAlignment="Center" Classes="pulse-dot" />
                     <TextBlock Text="{Binding TotalDownloadSpeedFormatted, StringFormat='{}↓ {0}'}" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" />
                     <TextBlock Text="•" FontSize="10" Foreground="{DynamicResource TextMutedBrush}" VerticalAlignment="Center" />
                     <TextBlock Text="{Binding TotalActiveCount, StringFormat='{}{0} active'}" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center" />
@@ -190,16 +191,17 @@
                         <ItemsControl ItemsSource="{Binding DisplayedDownloads}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate DataType="models:DownloadItem">
-                                    <Border Background="{DynamicResource CardBgBrush}"
-                                            BorderBrush="{DynamicResource BorderBrushCustom}"
-                                            BorderThickness="1"
-                                            CornerRadius="6"
+                                    <Border Classes="download-card"
                                             Margin="0,0,0,8"
                                             Padding="14,10">
                                         <Grid RowDefinitions="Auto, Auto, Auto">
                                             <!-- Top Row: File Name & Size -->
                                             <Grid Grid.Row="0" ColumnDefinitions="*, Auto" Margin="0,0,0,6">
-                                                <TextBlock Grid.Column="0" Text="{Binding FileName}" FontWeight="Medium" FontSize="13" Foreground="{DynamicResource TextPrimaryBrush}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                                <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                                    <!-- Live pulse when active -->
+                                                    <Ellipse Width="6" Height="6" Fill="{DynamicResource AccentBrush}" VerticalAlignment="Center" IsVisible="{Binding IsActive}" Classes="pulse-dot" />
+                                                    <TextBlock Text="{Binding FileName}" FontWeight="Medium" FontSize="13" Foreground="{DynamicResource TextPrimaryBrush}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                                </StackPanel>
                                                 <TextBlock Grid.Column="1" Text="{Binding FormattedSize}" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center" Margin="8,0,0,0" />
                                             </Grid>
 
@@ -349,8 +351,8 @@
                                  Watermark="https://example.com/file.zip" />
                     </StackPanel>
 
-                    <!-- File Details Container with Glassmorphic Loading Overlay -->
-                    <Grid>
+                    <!-- File Details Container with Glassmorphic Loading Overlay & Animations -->
+                    <Grid MinHeight="86">
                         <!-- File Details & Metadata Section -->
                         <StackPanel Spacing="10">
                             <!-- File Name -->
@@ -359,34 +361,34 @@
                                 <TextBox Classes="minimal-input" Text="{Binding CustomFileName}" Watermark="Auto-detected file name..." />
                             </StackPanel>
 
-                            <!-- Fetched Server Metadata Cards -->
+                            <!-- Fetched Server Metadata Card Grid -->
                             <Border IsVisible="{Binding HasDetectedInfo}"
-                                    Background="{DynamicResource InputBgBrush}"
+                                    Background="{DynamicResource ChipBgBrush}"
                                     BorderBrush="{DynamicResource BorderBrushCustom}"
                                     BorderThickness="1"
                                     CornerRadius="6"
-                                    Padding="10,8">
+                                    Padding="12,10">
                                 <Grid ColumnDefinitions="*, *, *, *" DataContext="{Binding CurrentMetadata}">
                                     <!-- Size -->
-                                    <StackPanel Grid.Column="0" Spacing="2">
+                                    <StackPanel Grid.Column="0" Spacing="3">
                                         <TextBlock Text="SIZE" FontSize="9" FontWeight="Bold" Foreground="{DynamicResource TextMutedBrush}" />
                                         <TextBlock Text="{Binding FormattedSize}" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" TextTrimming="CharacterEllipsis" />
                                     </StackPanel>
 
                                     <!-- Type -->
-                                    <StackPanel Grid.Column="1" Spacing="2">
+                                    <StackPanel Grid.Column="1" Spacing="3">
                                         <TextBlock Text="TYPE" FontSize="9" FontWeight="Bold" Foreground="{DynamicResource TextMutedBrush}" />
                                         <TextBlock Text="{Binding DisplayType}" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" TextTrimming="CharacterEllipsis" />
                                     </StackPanel>
 
                                     <!-- Resumable -->
-                                    <StackPanel Grid.Column="2" Spacing="2">
+                                    <StackPanel Grid.Column="2" Spacing="3">
                                         <TextBlock Text="RESUMABLE" FontSize="9" FontWeight="Bold" Foreground="{DynamicResource TextMutedBrush}" />
-                                        <TextBlock Text="{Binding ResumableText}" FontSize="11" Foreground="{DynamicResource AccentBrush}" TextTrimming="CharacterEllipsis" />
+                                        <TextBlock Text="{Binding ResumableText}" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}" TextTrimming="CharacterEllipsis" />
                                     </StackPanel>
 
                                     <!-- Host / Domain -->
-                                    <StackPanel Grid.Column="3" Spacing="2">
+                                    <StackPanel Grid.Column="3" Spacing="3">
                                         <TextBlock Text="HOST" FontSize="9" FontWeight="Bold" Foreground="{DynamicResource TextMutedBrush}" />
                                         <TextBlock Text="{Binding Domain}" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" TextTrimming="CharacterEllipsis" />
                                     </StackPanel>
@@ -394,7 +396,7 @@
                             </Border>
                         </StackPanel>
 
-                        <!-- Sleek Glassmorphic Fetching Overlay -->
+                        <!-- Sleek Glassmorphic Fetching Overlay with Pulsing Scanner Animation -->
                         <Border IsVisible="{Binding IsFetchingMetadata}"
                                 Background="{DynamicResource GlassOverlayBgBrush}"
                                 BorderBrush="{DynamicResource GlassOverlayBorderBrush}"
@@ -402,26 +404,26 @@
                                 CornerRadius="6"
                                 HorizontalAlignment="Stretch"
                                 VerticalAlignment="Stretch">
-                            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="6">
-                                <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
-                                    <Ellipse Width="8" Height="8" Fill="{DynamicResource AccentBrush}">
-                                        <Ellipse.Styles>
-                                            <Style Selector="Ellipse">
-                                                <Setter Property="Opacity" Value="0.9" />
-                                            </Style>
-                                        </Ellipse.Styles>
-                                    </Ellipse>
-                                    <TextBlock Text="Fetching file details from server..."
-                                               FontSize="11"
-                                               FontWeight="Medium"
-                                               Foreground="{DynamicResource TextPrimaryBrush}"
-                                               VerticalAlignment="Center" />
+                            <Grid RowDefinitions="*, Auto">
+                                <StackPanel Grid.Row="0" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="7">
+                                    <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
+                                        <!-- Pulsing Glow Dot -->
+                                        <Ellipse Width="8" Height="8" Fill="{DynamicResource AccentBrush}" Classes="pulse-dot" VerticalAlignment="Center" />
+                                        <TextBlock Text="Fetching file details from server..."
+                                                   FontSize="12"
+                                                   FontWeight="SemiBold"
+                                                   Foreground="{DynamicResource TextPrimaryBrush}"
+                                                   VerticalAlignment="Center" />
+                                    </StackPanel>
+                                    <TextBlock Text="Probing Content-Disposition headers &amp; file size"
+                                               FontSize="10"
+                                               Foreground="{DynamicResource TextMutedBrush}"
+                                               HorizontalAlignment="Center" />
                                 </StackPanel>
-                                <TextBlock Text="Probing Content-Disposition headers &amp; size"
-                                           FontSize="10"
-                                           Foreground="{DynamicResource TextMutedBrush}"
-                                           HorizontalAlignment="Center" />
-                            </StackPanel>
+
+                                <!-- Bottom Glowing Scanning Line -->
+                                <ProgressBar Grid.Row="1" Classes="scanner-bar" Margin="0,0,0,1" />
+                            </Grid>
                         </Border>
                     </Grid>
 
@@ -444,7 +446,7 @@
 
                     <!-- Actions -->
                     <Grid ColumnDefinitions="*, Auto, Auto" Margin="0,4,0,0">
-                        <TextBlock Grid.Column="0" Text="{Binding StatusMessage}" IsVisible="{Binding StatusMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" Foreground="#EF4444" FontSize="11" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                        <TextBlock Grid.Column="0" Text="{Binding StatusMessage}" IsVisible="{Binding StatusMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" Foreground="{DynamicResource TextMutedBrush}" FontSize="11" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
                         <Button Grid.Column="1" Classes="ghost-btn" Command="{Binding CancelCommand}" Content="Cancel" Margin="0,0,6,0" Padding="12,6" />
                         <Button Grid.Column="2" Classes="primary-btn" Command="{Binding ConfirmCommand}" Content="Download" Padding="14,6" />
                     </Grid>

@@ -18,6 +18,7 @@
                     <SolidColorBrush x:Key="CardBgBrush" Color="#FFFFFF" />
                     <SolidColorBrush x:Key="CardHoverBrush" Color="#F8FAFC" />
                     <SolidColorBrush x:Key="BorderBrushCustom" Color="#E5E7EB" />
+                    <SolidColorBrush x:Key="BorderHoverBrush" Color="#CBD5E1" />
                     <SolidColorBrush x:Key="InputBgBrush" Color="#FFFFFF" />
                     <SolidColorBrush x:Key="TextPrimaryBrush" Color="#111827" />
                     <SolidColorBrush x:Key="TextSecondaryBrush" Color="#4B5563" />
@@ -31,6 +32,7 @@
                     <SolidColorBrush x:Key="ModalOverlayBrush" Color="#66000000" />
                     <SolidColorBrush x:Key="GlassOverlayBgBrush" Color="#F2FFFFFF" />
                     <SolidColorBrush x:Key="GlassOverlayBorderBrush" Color="#E2E8F0" />
+                    <SolidColorBrush x:Key="ChipBgBrush" Color="#F1F5F9" />
                 </ResourceDictionary>
 
                 <!-- MINIMAL LCD DARK PALETTE -->
@@ -40,6 +42,7 @@
                     <SolidColorBrush x:Key="CardBgBrush" Color="#15171C" />
                     <SolidColorBrush x:Key="CardHoverBrush" Color="#1B1D23" />
                     <SolidColorBrush x:Key="BorderBrushCustom" Color="#20222A" />
+                    <SolidColorBrush x:Key="BorderHoverBrush" Color="#333846" />
                     <SolidColorBrush x:Key="InputBgBrush" Color="#121317" />
                     <SolidColorBrush x:Key="TextPrimaryBrush" Color="#F3F4F6" />
                     <SolidColorBrush x:Key="TextSecondaryBrush" Color="#9CA3AF" />
@@ -53,6 +56,7 @@
                     <SolidColorBrush x:Key="ModalOverlayBrush" Color="#B3000000" />
                     <SolidColorBrush x:Key="GlassOverlayBgBrush" Color="#F2101217" />
                     <SolidColorBrush x:Key="GlassOverlayBorderBrush" Color="#222530" />
+                    <SolidColorBrush x:Key="ChipBgBrush" Color="#181B22" />
                 </ResourceDictionary>
             </ResourceDictionary.ThemeDictionaries>
         </ResourceDictionary>
@@ -66,7 +70,7 @@
             <Setter Property="Cursor" Value="Hand" />
         </Style>
 
-        <!-- Minimal Primary Button -->
+        <!-- Minimal Primary Button with Transitions -->
         <Style Selector="Button.primary-btn">
             <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
             <Setter Property="Foreground" Value="#FFFFFF" />
@@ -75,13 +79,22 @@
             <Setter Property="Padding" Value="14,7" />
             <Setter Property="CornerRadius" Value="6" />
             <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Transitions">
+                <Transitions>
+                    <BrushTransition Property="Background" Duration="0:0:0.18" />
+                    <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.15" />
+                </Transitions>
+            </Setter>
         </Style>
         <Style Selector="Button.primary-btn:pointerover /template/ ContentPresenter">
             <Setter Property="Background" Value="{DynamicResource AccentHoverBrush}" />
             <Setter Property="Foreground" Value="#FFFFFF" />
         </Style>
+        <Style Selector="Button.primary-btn:pressed">
+            <Setter Property="RenderTransform" Value="scale(0.97)" />
+        </Style>
 
-        <!-- Minimal Outline / Subtle Button -->
+        <!-- Minimal Outline / Subtle Button with Transitions -->
         <Style Selector="Button.subtle-btn">
             <Setter Property="Background" Value="{DynamicResource CardBgBrush}" />
             <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
@@ -91,11 +104,21 @@
             <Setter Property="FontWeight" Value="Medium" />
             <Setter Property="Padding" Value="12,6" />
             <Setter Property="CornerRadius" Value="6" />
+            <Setter Property="Transitions">
+                <Transitions>
+                    <BrushTransition Property="Background" Duration="0:0:0.18" />
+                    <BrushTransition Property="BorderBrush" Duration="0:0:0.18" />
+                    <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.15" />
+                </Transitions>
+            </Setter>
         </Style>
         <Style Selector="Button.subtle-btn:pointerover /template/ ContentPresenter">
             <Setter Property="Background" Value="{DynamicResource CardHoverBrush}" />
-            <Setter Property="BorderBrush" Value="{DynamicResource TextMutedBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderHoverBrush}" />
             <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+        </Style>
+        <Style Selector="Button.subtle-btn:pressed">
+            <Setter Property="RenderTransform" Value="scale(0.97)" />
         </Style>
 
         <!-- Minimal Ghost Button -->
@@ -105,10 +128,34 @@
             <Setter Property="BorderThickness" Value="0" />
             <Setter Property="Padding" Value="8,5" />
             <Setter Property="CornerRadius" Value="5" />
+            <Setter Property="Transitions">
+                <Transitions>
+                    <BrushTransition Property="Background" Duration="0:0:0.15" />
+                </Transitions>
+            </Setter>
         </Style>
         <Style Selector="Button.ghost-btn:pointerover /template/ ContentPresenter">
             <Setter Property="Background" Value="{DynamicResource CardHoverBrush}" />
             <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+        </Style>
+
+        <!-- Download Card Style with Hover Lift & Border Glow -->
+        <Style Selector="Border.download-card">
+            <Setter Property="Background" Value="{DynamicResource CardBgBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrushCustom}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="6" />
+            <Setter Property="Transitions">
+                <Transitions>
+                    <BrushTransition Property="BorderBrush" Duration="0:0:0.2" />
+                    <BrushTransition Property="Background" Duration="0:0:0.2" />
+                    <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.2" />
+                </Transitions>
+            </Setter>
+        </Style>
+        <Style Selector="Border.download-card:pointerover">
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderHoverBrush}" />
+            <Setter Property="Background" Value="{DynamicResource CardHoverBrush}" />
         </Style>
 
         <!-- Windows Title Bar Caption Buttons (Minimize, Maximize) -->
@@ -122,6 +169,11 @@
             <Setter Property="CornerRadius" Value="0" />
             <Setter Property="HorizontalContentAlignment" Value="Center" />
             <Setter Property="VerticalContentAlignment" Value="Center" />
+            <Setter Property="Transitions">
+                <Transitions>
+                    <BrushTransition Property="Background" Duration="0:0:0.12" />
+                </Transitions>
+            </Setter>
         </Style>
         <Style Selector="Button.caption-btn:pointerover /template/ ContentPresenter">
             <Setter Property="Background" Value="{DynamicResource CaptionBtnHoverBrush}" />
@@ -142,6 +194,11 @@
             <Setter Property="CornerRadius" Value="0" />
             <Setter Property="HorizontalContentAlignment" Value="Center" />
             <Setter Property="VerticalContentAlignment" Value="Center" />
+            <Setter Property="Transitions">
+                <Transitions>
+                    <BrushTransition Property="Background" Duration="0:0:0.12" />
+                </Transitions>
+            </Setter>
         </Style>
         <Style Selector="Button.caption-close-btn:pointerover /template/ ContentPresenter">
             <Setter Property="Background" Value="#E81123" />
@@ -166,13 +223,18 @@
             <Setter Property="FontSize" Value="12" />
             <Setter Property="FontWeight" Value="Medium" />
             <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Transitions">
+                <Transitions>
+                    <BrushTransition Property="Background" Duration="0:0:0.15" />
+                </Transitions>
+            </Setter>
         </Style>
         <Style Selector="Button.nav-link:pointerover /template/ ContentPresenter">
             <Setter Property="Background" Value="{DynamicResource CardHoverBrush}" />
             <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
         </Style>
 
-        <!-- Minimal Input Box -->
+        <!-- Minimal Input Box with Transitions -->
         <Style Selector="TextBox.minimal-input">
             <Setter Property="Background" Value="{DynamicResource InputBgBrush}" />
             <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
@@ -181,6 +243,11 @@
             <Setter Property="CornerRadius" Value="6" />
             <Setter Property="Padding" Value="10,6" />
             <Setter Property="FontSize" Value="12" />
+            <Setter Property="Transitions">
+                <Transitions>
+                    <BrushTransition Property="BorderBrush" Duration="0:0:0.18" />
+                </Transitions>
+            </Setter>
         </Style>
         <Style Selector="TextBox.minimal-input:focus /template/ Border#PART_BorderElement">
             <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
@@ -194,6 +261,33 @@
             <Setter Property="CornerRadius" Value="2" />
             <Setter Property="Background" Value="{DynamicResource ProgressTrackBrush}" />
             <Setter Property="Foreground" Value="{DynamicResource ProgressFillBrush}" />
+            <Setter Property="BorderThickness" Value="0" />
+        </Style>
+
+        <!-- Pulsing Indicator Animation -->
+        <Style Selector="Ellipse.pulse-dot">
+            <Style.Animations>
+                <Animation Duration="0:0:1.4" IterationCount="Infinite">
+                    <KeyFrame Cue="0%">
+                        <Setter Property="Opacity" Value="0.4" />
+                    </KeyFrame>
+                    <KeyFrame Cue="50%">
+                        <Setter Property="Opacity" Value="1.0" />
+                    </KeyFrame>
+                    <KeyFrame Cue="100%">
+                        <Setter Property="Opacity" Value="0.4" />
+                    </KeyFrame>
+                </Animation>
+            </Style.Animations>
+        </Style>
+
+        <!-- Scanner Line Animation -->
+        <Style Selector="ProgressBar.scanner-bar">
+            <Setter Property="IsIndeterminate" Value="True" />
+            <Setter Property="Height" Value="2" />
+            <Setter Property="CornerRadius" Value="1" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Foreground" Value="{DynamicResource AccentBrush}" />
             <Setter Property="BorderThickness" Value="0" />
         </Style>
     </Application.Styles>
