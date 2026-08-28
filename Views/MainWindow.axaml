@@ -34,12 +34,21 @@
                 </StackPanel>
 
                 <!-- Center Live Stats (when downloading) -->
-                <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="10"
+                <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="6"
                             IsVisible="{Binding TotalActiveCount}">
-                    <Ellipse Width="6" Height="6" Fill="{DynamicResource AccentBrush}" VerticalAlignment="Center" Classes="pulse-dot" />
-                    <TextBlock Text="{Binding TotalDownloadSpeedFormatted, StringFormat='{}↓ {0}'}" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" />
-                    <TextBlock Text="•" FontSize="10" Foreground="{DynamicResource TextMutedBrush}" VerticalAlignment="Center" />
-                    <TextBlock Text="{Binding TotalActiveCount, StringFormat='{}{0} active'}" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center" />
+                    <Ellipse Width="6" Height="6" Fill="{DynamicResource AccentBrush}" VerticalAlignment="Center" Classes="pulse-dot" Margin="0,0,4,0" />
+                    <TextBlock Text="{Binding TotalDownloadSpeedFormatted, StringFormat='{}↓ {0}'}" 
+                               MinWidth="76"
+                               FontSize="11" 
+                               FontWeight="SemiBold" 
+                               Foreground="{DynamicResource AccentBrush}" 
+                               VerticalAlignment="Center" />
+                    <TextBlock Text="•" FontSize="10" Foreground="{DynamicResource TextMutedBrush}" Margin="2,0" VerticalAlignment="Center" />
+                    <TextBlock Text="{Binding TotalActiveCount, StringFormat='{}{0} active'}" 
+                               MinWidth="52"
+                               FontSize="11" 
+                               Foreground="{DynamicResource TextSecondaryBrush}" 
+                               VerticalAlignment="Center" />
                 </StackPanel>
 
                 <!-- Theme Switcher Button -->
@@ -202,7 +211,7 @@
                                                     <Ellipse Width="6" Height="6" Fill="{DynamicResource AccentBrush}" VerticalAlignment="Center" IsVisible="{Binding IsActive}" Classes="pulse-dot" />
                                                     <TextBlock Text="{Binding FileName}" FontWeight="Medium" FontSize="13" Foreground="{DynamicResource TextPrimaryBrush}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
                                                 </StackPanel>
-                                                <TextBlock Grid.Column="1" Text="{Binding FormattedSize}" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center" Margin="8,0,0,0" />
+                                                <TextBlock Grid.Column="1" Text="{Binding FormattedSize}" MinWidth="110" TextAlignment="Right" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center" Margin="8,0,0,0" />
                                             </Grid>
 
                                             <!-- Middle Row: Minimal Progress Bar -->
@@ -215,26 +224,53 @@
 
                                             <!-- Bottom Row: Metadata & Actions -->
                                             <Grid Grid.Row="2" ColumnDefinitions="*, Auto">
-                                                <!-- Metadata Line -->
-                                                <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                                                    <TextBlock Text="{Binding ProgressPercentage, StringFormat='{}{0:0.#}%'}" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}" />
-                                                    <TextBlock Text="•" FontSize="10" Foreground="{DynamicResource TextMutedBrush}" />
-                                                    <TextBlock Text="{Binding StatusDisplayText}" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" />
+                                                <!-- Metadata Line with Stable Fixed Boundaries -->
+                                                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                                                    <!-- Progress Percentage (Fixed Slot) -->
+                                                    <TextBlock Text="{Binding ProgressPercentage, StringFormat='{}{0:0.#}%'}"
+                                                               Width="44"
+                                                               FontSize="11"
+                                                               FontWeight="SemiBold"
+                                                               Foreground="{DynamicResource AccentBrush}"
+                                                               VerticalAlignment="Center" />
 
-                                                    <!-- Live Speed -->
-                                                    <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding FormattedSpeed, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
-                                                        <TextBlock Text="•" FontSize="10" Foreground="{DynamicResource TextMutedBrush}" />
-                                                        <TextBlock Text="{Binding FormattedSpeed}" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" />
+                                                    <!-- Status (Fixed Slot) -->
+                                                    <TextBlock Text="•" FontSize="10" Foreground="{DynamicResource TextMutedBrush}" Margin="6,0" VerticalAlignment="Center" />
+                                                    <TextBlock Text="{Binding StatusDisplayText}"
+                                                               MinWidth="76"
+                                                               FontSize="11"
+                                                               Foreground="{DynamicResource TextSecondaryBrush}"
+                                                               VerticalAlignment="Center" />
+
+                                                    <!-- Live Speed (Fixed Slot) -->
+                                                    <StackPanel Orientation="Horizontal" IsVisible="{Binding FormattedSpeed, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                                                        <TextBlock Text="•" FontSize="10" Foreground="{DynamicResource TextMutedBrush}" Margin="6,0" VerticalAlignment="Center" />
+                                                        <TextBlock Text="{Binding FormattedSpeed}"
+                                                                   MinWidth="85"
+                                                                   FontSize="11"
+                                                                   Foreground="{DynamicResource TextSecondaryBrush}"
+                                                                   VerticalAlignment="Center" />
                                                     </StackPanel>
 
-                                                    <!-- ETA -->
-                                                    <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding FormattedEta, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
-                                                        <TextBlock Text="•" FontSize="10" Foreground="{DynamicResource TextMutedBrush}" />
-                                                        <TextBlock Text="{Binding FormattedEta}" FontSize="11" Foreground="{DynamicResource TextMutedBrush}" />
+                                                    <!-- ETA (Fixed Slot) -->
+                                                    <StackPanel Orientation="Horizontal" IsVisible="{Binding FormattedEta, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                                                        <TextBlock Text="•" FontSize="10" Foreground="{DynamicResource TextMutedBrush}" Margin="6,0" VerticalAlignment="Center" />
+                                                        <TextBlock Text="{Binding FormattedEta}"
+                                                                   MinWidth="95"
+                                                                   FontSize="11"
+                                                                   Foreground="{DynamicResource TextMutedBrush}"
+                                                                   VerticalAlignment="Center" />
                                                     </StackPanel>
 
                                                     <!-- Error msg -->
-                                                    <TextBlock Text="{Binding ErrorMessage}" IsVisible="{Binding ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" FontSize="11" Foreground="#EF4444" />
+                                                    <StackPanel Orientation="Horizontal" IsVisible="{Binding ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                                                        <TextBlock Text="•" FontSize="10" Foreground="{DynamicResource TextMutedBrush}" Margin="6,0" VerticalAlignment="Center" />
+                                                        <TextBlock Text="{Binding ErrorMessage}"
+                                                                   FontSize="11"
+                                                                   Foreground="#EF4444"
+                                                                   VerticalAlignment="Center"
+                                                                   TextTrimming="CharacterEllipsis" />
+                                                    </StackPanel>
                                                 </StackPanel>
 
                                                 <!-- Action Buttons -->
