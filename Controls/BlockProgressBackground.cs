@@ -238,17 +238,19 @@ public class BlockProgressBackground : Control
         int cols = (int)Math.Max(1, Math.Floor((bounds.Width + gap) / (cell + gap)));
         int rows = (int)Math.Max(1, Math.Floor((bounds.Height + gap) / (cell + gap)));
 
+        int totalCells = cols * rows;
+
         double actualGridWidth = (cols * cell) + ((cols - 1) * gap);
         double actualGridHeight = (rows * cell) + ((rows - 1) * gap);
 
         double startX = Math.Max(0, (bounds.Width - actualGridWidth) / 2.0);
         double startY = Math.Max(0, (bounds.Height - actualGridHeight) / 2.0);
 
-        // Column-based progress so ALL rows fill together horizontally (matching the progress bar!)
+        // Fill cell-by-cell sequentially to the right row by row based on percentage
         double pct = Math.Clamp(_animatedProgress, 0.0, 100.0);
-        double exactFilledCols = (pct / 100.0) * cols;
-        int fullFilledColCount = (int)Math.Floor(exactFilledCols);
-        double fractionalCol = exactFilledCols - fullFilledColCount;
+        double exactFilled = (pct / 100.0) * totalCells;
+        int filledCount = (int)Math.Floor(exactFilled);
+        double fractionalCell = exactFilled - filledCount;
 
         // Select palette cleanly from PaletteIndex
         int palIdx = Math.Abs(PaletteIndex) % Palettes.Length;
@@ -282,35 +284,33 @@ public class BlockProgressBackground : Control
             borderBaseAlpha = 72;
         }
 
-        for (int c = 0; c < cols; c++)
+        int cellIndex = 0;
+        for (int r = 0; r < rows; r++)
         {
-            double x = startX + c * (cell + gap);
-            double horizontalRatio = (x + cell * 0.5) / bounds.Width;
-            var baseColor = GetPaletteGradientColor(currentPalette, horizontalRatio);
-
-            bool isColFullyFilled = c < fullFilledColCount;
-            bool isColFractional = c == fullFilledColCount && fractionalCol > 0.03;
-
-            for (int r = 0; r < rows; r++)
+            double y = startY + r * (cell + gap);
+            for (int c = 0; c < cols; c++)
             {
-                double y = startY + r * (cell + gap);
+                double x = startX + c * (cell + gap);
                 var rect = new Rect(x, y, cell, cell);
                 var rrect = new RoundedRect(rect, radius);
 
-                if (isColFullyFilled)
+                double horizontalRatio = (x + cell * 0.5) / bounds.Width;
+                var baseColor = GetPaletteGradientColor(currentPalette, horizontalRatio);
+
+                if (cellIndex < filledCount)
                 {
-                    // Fully filled column cell across all rows
+                    // Fully filled cell
                     var fillBrush = new SolidColorBrush(Color.FromArgb(fillBaseAlpha, baseColor.R, baseColor.G, baseColor.B));
                     var borderPen = new Pen(new SolidColorBrush(Color.FromArgb(borderBaseAlpha, baseColor.R, baseColor.G, baseColor.B)), 0.9);
 
                     context.DrawRectangle(fillBrush, borderPen, rrect);
                     context.DrawLine(glassHighlightPen, new Point(x + radius, y + 0.8), new Point(x + cell - radius, y + 0.8));
                 }
-                else if (isColFractional)
+                else if (cellIndex == filledCount && fractionalCell > 0.03)
                 {
-                    // Smoothly transitioning boundary column
-                    byte fillAlpha = (byte)Math.Clamp(fillBaseAlpha * fractionalCol, 6, fillBaseAlpha);
-                    byte borderAlpha = (byte)Math.Clamp(borderBaseAlpha * fractionalCol, 18, borderBaseAlpha);
+                    // Smooth fractional leading cell
+                    byte fillAlpha = (byte)Math.Clamp(fillBaseAlpha * fractionalCell, 6, fillBaseAlpha);
+                    byte borderAlpha = (byte)Math.Clamp(borderBaseAlpha * fractionalCell, 18, borderBaseAlpha);
 
                     var fillBrush = new SolidColorBrush(Color.FromArgb(fillAlpha, baseColor.R, baseColor.G, baseColor.B));
                     var borderPen = new Pen(new SolidColorBrush(Color.FromArgb(borderAlpha, baseColor.R, baseColor.G, baseColor.B)), 0.9);
@@ -341,6 +341,8 @@ public class BlockProgressBackground : Control
                         context.DrawLine(glassHighlightPen, new Point(x + radius, y + 0.8), new Point(x + cell - radius, y + 0.8));
                     }
                 }
+
+                cellIndex++;
             }
         }
     }
