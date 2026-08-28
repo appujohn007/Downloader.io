@@ -28,12 +28,10 @@
                     <SolidColorBrush x:Key="ProgressTrackBrush" Color="#E5E7EB" />
                     <SolidColorBrush x:Key="ProgressFillBrush" Color="#2563EB" />
                     <SolidColorBrush x:Key="CaptionBtnHoverBrush" Color="#E5E7EB" />
-                    <SolidColorBrush x:Key="CaptionCloseHoverBrush" Color="#E81123" />
-                    <SolidColorBrush x:Key="CaptionCloseFgBrush" Color="#111827" />
                     <SolidColorBrush x:Key="ModalOverlayBrush" Color="#66000000" />
                 </ResourceDictionary>
 
-                <!-- MINIMAL LCD DARK PALETTE (Matte, High-Contrast, Zero-Glow) -->
+                <!-- MINIMAL LCD DARK PALETTE -->
                 <ResourceDictionary x:Key="Dark">
                     <SolidColorBrush x:Key="AppBgBrush" Color="#0B0C0E" />
                     <SolidColorBrush x:Key="SidebarBgBrush" Color="#101114" />
@@ -49,9 +47,7 @@
                     <SolidColorBrush x:Key="AccentSubtleBrush" Color="#131F37" />
                     <SolidColorBrush x:Key="ProgressTrackBrush" Color="#20222A" />
                     <SolidColorBrush x:Key="ProgressFillBrush" Color="#3B82F6" />
-                    <SolidColorBrush x:Key="CaptionBtnHoverBrush" Color="#1F222B" />
-                    <SolidColorBrush x:Key="CaptionCloseHoverBrush" Color="#E81123" />
-                    <SolidColorBrush x:Key="CaptionCloseFgBrush" Color="#F3F4F6" />
+                    <SolidColorBrush x:Key="CaptionBtnHoverBrush" Color="#20232C" />
                     <SolidColorBrush x:Key="ModalOverlayBrush" Color="#B3000000" />
                 </ResourceDictionary>
             </ResourceDictionary.ThemeDictionaries>
@@ -111,10 +107,10 @@
             <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
         </Style>
 
-        <!-- Windows Title Bar Caption Buttons -->
+        <!-- Windows Title Bar Caption Buttons (Minimize, Maximize) -->
         <Style Selector="Button.caption-btn">
             <Setter Property="Background" Value="Transparent" />
-            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
             <Setter Property="BorderThickness" Value="0" />
             <Setter Property="Width" Value="46" />
             <Setter Property="Height" Value="34" />
@@ -127,11 +123,14 @@
             <Setter Property="Background" Value="{DynamicResource CaptionBtnHoverBrush}" />
             <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
         </Style>
+        <Style Selector="Button.caption-btn:pressed /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource BorderBrushCustom}" />
+        </Style>
 
-        <!-- Caption Close Button (Red Hover) -->
+        <!-- Windows Title Bar Close Button (Red on Hover) -->
         <Style Selector="Button.caption-close-btn">
             <Setter Property="Background" Value="Transparent" />
-            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
             <Setter Property="BorderThickness" Value="0" />
             <Setter Property="Width" Value="46" />
             <Setter Property="Height" Value="34" />
@@ -141,7 +140,14 @@
             <Setter Property="VerticalContentAlignment" Value="Center" />
         </Style>
         <Style Selector="Button.caption-close-btn:pointerover /template/ ContentPresenter">
-            <Setter Property="Background" Value="{DynamicResource CaptionCloseHoverBrush}" />
+            <Setter Property="Background" Value="#E81123" />
+            <Setter Property="Foreground" Value="#FFFFFF" />
+        </Style>
+        <Style Selector="Button.caption-close-btn:pointerover Path">
+            <Setter Property="Stroke" Value="#FFFFFF" />
+        </Style>
+        <Style Selector="Button.caption-close-btn:pressed /template/ ContentPresenter">
+            <Setter Property="Background" Value="#C4101E" />
             <Setter Property="Foreground" Value="#FFFFFF" />
         </Style>
 
