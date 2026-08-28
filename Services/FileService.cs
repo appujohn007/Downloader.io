@@ -40,6 +40,10 @@ public class FileService : IFileService
             {
                 Process.Start("explorer.exe", $"/select,\"{filePath}\"");
             }
+            else if (File.Exists($"{filePath}.downloaderio"))
+            {
+                Process.Start("explorer.exe", $"/select,\"{filePath}.downloaderio\"");
+            }
             else
             {
                 var dir = Directory.Exists(filePath) ? filePath : Path.GetDirectoryName(filePath);

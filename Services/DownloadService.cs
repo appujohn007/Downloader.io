@@ -264,12 +264,19 @@ public class DownloadService : IDownloadService
             }
 
             var targetFilePath = item.FullPath;
+            var partialFilePath = item.PartialPath;
             long existingBytes = 0;
 
-            if (File.Exists(targetFilePath))
+            if (File.Exists(partialFilePath))
+            {
+                existingBytes = new FileInfo(partialFilePath).Length;
+                Logger.Download($"[RESUME] Found existing partial file '{partialFilePath}' with {DownloadItem.FormatBytes(existingBytes)}");
+            }
+            else if (File.Exists(targetFilePath))
             {
                 existingBytes = new FileInfo(targetFilePath).Length;
-                Logger.Download($"[RESUME] Found existing partial file '{targetFilePath}' with {DownloadItem.FormatBytes(existingBytes)}");
+                File.Move(targetFilePath, partialFilePath, true);
+                Logger.Download($"[RESUME] Found existing partial file '{targetFilePath}', moved to '{partialFilePath}' with {DownloadItem.FormatBytes(existingBytes)}");
             }
 
             using var request = new HttpRequestMessage(HttpMethod.Get, item.Url);
@@ -293,12 +300,13 @@ public class DownloadService : IDownloadService
                 {
                     Logger.Warn($"HTTP 416 Range Not Satisfiable. Deleting existing partial file and starting from byte 0.");
                     existingBytes = 0;
+                    if (File.Exists(partialFilePath)) File.Delete(partialFilePath);
                     if (File.Exists(targetFilePath)) File.Delete(targetFilePath);
 
                     using var freshRequest = new HttpRequestMessage(HttpMethod.Get, item.Url);
                     using var freshResponse = await HttpClient.SendAsync(freshRequest, HttpCompletionOption.ResponseHeadersRead, ct);
                     freshResponse.EnsureSuccessStatusCode();
-                    await ProcessDownloadStreamAsync(item, freshResponse, targetFilePath, 0, ct);
+                    await ProcessDownloadStreamAsync(item, freshResponse, partialFilePath, targetFilePath, 0, ct);
                     return;
                 }
 
@@ -321,8 +329,8 @@ public class DownloadService : IDownloadService
                 existingBytes = 0;
             }
 
-            Logger.Download($"[DOWNLOADING] '{item.FileName}' | Total Target Size: {DownloadItem.FormatBytes(totalLength)} | Destination: {targetFilePath}");
-            await ProcessDownloadStreamAsync(item, response, targetFilePath, existingBytes, ct, totalLength);
+            Logger.Download($"[DOWNLOADING] '{item.FileName}' | In-Progress: '{partialFilePath}' | Total Target Size: {DownloadItem.FormatBytes(totalLength)}");
+            await ProcessDownloadStreamAsync(item, response, partialFilePath, targetFilePath, existingBytes, ct, totalLength);
         }
         catch (OperationCanceledException)
         {
@@ -347,7 +355,8 @@ public class DownloadService : IDownloadService
     private async Task ProcessDownloadStreamAsync(
         DownloadItem item,
         HttpResponseMessage response,
-        string targetFilePath,
+        string partialFilePath,
+        string finalFilePath,
         long initialBytes,
         CancellationToken ct,
         long totalLength = -1)
@@ -365,91 +374,110 @@ public class DownloadService : IDownloadService
         UpdateUi(item);
 
         using var contentStream = await response.Content.ReadAsStreamAsync(ct);
-        using var fileStream = new FileStream(
-            targetFilePath,
+        
+        using (var fileStream = new FileStream(
+            partialFilePath,
             initialBytes > 0 ? FileMode.Append : FileMode.Create,
             FileAccess.Write,
             FileShare.ReadWrite,
             bufferSize: 81920,
-            useAsync: true);
-
-        var buffer = new byte[81920];
-        int bytesRead;
-        long bytesSinceLastSample = 0;
-        double smoothedSpeed = 0.0;
-
-        var speedSampleTimer = Stopwatch.StartNew();
-        var uiProgressTimer = Stopwatch.StartNew();
-        var uiSpeedDisplayTimer = Stopwatch.StartNew();
-        var lastConsoleLog = Stopwatch.StartNew();
-
-        while ((bytesRead = await contentStream.ReadAsync(buffer, 0, buffer.Length, ct)) > 0)
+            useAsync: true))
         {
-            await fileStream.WriteAsync(buffer, 0, bytesRead, ct);
+            var buffer = new byte[81920];
+            int bytesRead;
+            long bytesSinceLastSample = 0;
+            double smoothedSpeed = 0.0;
 
-            currentDownloadedBytes += bytesRead;
-            bytesSinceLastSample += bytesRead;
+            var speedSampleTimer = Stopwatch.StartNew();
+            var uiProgressTimer = Stopwatch.StartNew();
+            var uiSpeedDisplayTimer = Stopwatch.StartNew();
+            var lastConsoleLog = Stopwatch.StartNew();
 
-            // Sample speed every 250ms with Exponential Moving Average (EMA)
-            if (speedSampleTimer.ElapsedMilliseconds >= 250)
+            while ((bytesRead = await contentStream.ReadAsync(buffer, 0, buffer.Length, ct)) > 0)
             {
-                var elapsedSec = speedSampleTimer.Elapsed.TotalSeconds;
-                if (elapsedSec > 0)
+                await fileStream.WriteAsync(buffer, 0, bytesRead, ct);
+
+                currentDownloadedBytes += bytesRead;
+                bytesSinceLastSample += bytesRead;
+
+                // Sample speed every 250ms with Exponential Moving Average (EMA)
+                if (speedSampleTimer.ElapsedMilliseconds >= 250)
                 {
-                    var instantSpeed = bytesSinceLastSample / elapsedSec;
-                    if (smoothedSpeed <= 0)
+                    var elapsedSec = speedSampleTimer.Elapsed.TotalSeconds;
+                    if (elapsedSec > 0)
                     {
-                        smoothedSpeed = instantSpeed;
+                        var instantSpeed = bytesSinceLastSample / elapsedSec;
+                        if (smoothedSpeed <= 0)
+                        {
+                            smoothedSpeed = instantSpeed;
+                        }
+                        else
+                        {
+                            // EMA smoothing factor: 0.25 (stable yet responsive)
+                            smoothedSpeed = (0.25 * instantSpeed) + (0.75 * smoothedSpeed);
+                        }
                     }
-                    else
+                    bytesSinceLastSample = 0;
+                    speedSampleTimer.Restart();
+                }
+
+                // Multi-tiered UI update cadence:
+                // 1. Progress Bar & Downloaded bytes: update every ~100ms for smooth continuous fluid flow
+                // 2. Speed text & ETA: update every ~700ms for human readability without flickering
+                if (uiProgressTimer.ElapsedMilliseconds >= 100)
+                {
+                    double progressPct = 0;
+                    if (currentTotalBytes > 0)
                     {
-                        // EMA smoothing factor: 0.25 (stable yet responsive)
-                        smoothedSpeed = (0.25 * instantSpeed) + (0.75 * smoothedSpeed);
+                        progressPct = Math.Clamp(((double)currentDownloadedBytes / currentTotalBytes) * 100.0, 0, 100);
                     }
-                }
-                bytesSinceLastSample = 0;
-                speedSampleTimer.Restart();
-            }
 
-            // Multi-tiered UI update cadence:
-            // 1. Progress Bar & Downloaded bytes: update every ~100ms for smooth continuous fluid flow
-            // 2. Speed text & ETA: update every ~700ms for human readability without flickering
-            if (uiProgressTimer.ElapsedMilliseconds >= 100)
-            {
-                double progressPct = 0;
-                if (currentTotalBytes > 0)
-                {
-                    progressPct = Math.Clamp(((double)currentDownloadedBytes / currentTotalBytes) * 100.0, 0, 100);
-                }
+                    bool updateSpeedDisplay = uiSpeedDisplayTimer.ElapsedMilliseconds >= 700;
+                    if (updateSpeedDisplay)
+                    {
+                        uiSpeedDisplayTimer.Restart();
+                    }
 
-                bool updateSpeedDisplay = uiSpeedDisplayTimer.ElapsedMilliseconds >= 700;
-                if (updateSpeedDisplay)
-                {
-                    uiSpeedDisplayTimer.Restart();
+                    long snapDownloaded = currentDownloadedBytes;
+                    long snapTotal = currentTotalBytes;
+                    double snapSpeed = smoothedSpeed;
+
+                    Dispatcher.UIThread.Post(() =>
+                    {
+                        item.UpdateProgressMetrics(snapDownloaded, snapTotal, progressPct, snapSpeed, updateSpeedDisplay);
+                    }, DispatcherPriority.Normal);
+
+                    uiProgressTimer.Restart();
                 }
 
-                long snapDownloaded = currentDownloadedBytes;
-                long snapTotal = currentTotalBytes;
-                double snapSpeed = smoothedSpeed;
-
-                Dispatcher.UIThread.Post(() =>
+                // Periodic terminal log every 3 seconds
+                if (lastConsoleLog.ElapsedMilliseconds >= 3000)
                 {
-                    item.UpdateProgressMetrics(snapDownloaded, snapTotal, progressPct, snapSpeed, updateSpeedDisplay);
-                }, DispatcherPriority.Normal);
-
-                uiProgressTimer.Restart();
+                    double progressPct = currentTotalBytes > 0 ? ((double)currentDownloadedBytes / currentTotalBytes) * 100.0 : 0;
+                    Logger.Download($"[PROGRESS] '{item.FileName}': {progressPct:0.0}% | {DownloadItem.FormatBytes(currentDownloadedBytes)} / {DownloadItem.FormatBytes(currentTotalBytes)} | {DownloadItem.FormatBytes((long)smoothedSpeed)}/s");
+                    lastConsoleLog.Restart();
+                }
             }
 
-            // Periodic terminal log every 3 seconds
-            if (lastConsoleLog.ElapsedMilliseconds >= 3000)
-            {
-                double progressPct = currentTotalBytes > 0 ? ((double)currentDownloadedBytes / currentTotalBytes) * 100.0 : 0;
-                Logger.Download($"[PROGRESS] '{item.FileName}': {progressPct:0.0}% | {DownloadItem.FormatBytes(currentDownloadedBytes)} / {DownloadItem.FormatBytes(currentTotalBytes)} | {DownloadItem.FormatBytes((long)smoothedSpeed)}/s");
-                lastConsoleLog.Restart();
-            }
+            await fileStream.FlushAsync(ct);
         }
 
-        await fileStream.FlushAsync(ct);
+        // Promote completed partial file (.downloaderio) to the final file name
+        try
+        {
+            if (File.Exists(finalFilePath))
+            {
+                File.Delete(finalFilePath);
+            }
+            if (File.Exists(partialFilePath))
+            {
+                File.Move(partialFilePath, finalFilePath);
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.Warn($"Failed to rename '{partialFilePath}' to '{finalFilePath}': {ex.Message}");
+        }
 
         item.Status = DownloadStatus.Completed;
         item.CompletedAt = DateTime.Now;
@@ -462,7 +490,7 @@ public class DownloadService : IDownloadService
         item.DownloadedBytes = item.TotalBytes;
 
         UpdateUi(item);
-        Logger.Success($"[COMPLETED] Successfully downloaded '{item.FileName}' ({DownloadItem.FormatBytes(item.DownloadedBytes)}) to '{targetFilePath}'");
+        Logger.Success($"[COMPLETED] Successfully downloaded '{item.FileName}' ({DownloadItem.FormatBytes(item.DownloadedBytes)}) to '{finalFilePath}'");
     }
 
     public void PauseDownload(DownloadItem item)
