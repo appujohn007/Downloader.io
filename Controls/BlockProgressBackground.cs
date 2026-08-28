@@ -239,10 +239,33 @@ public class BlockProgressBackground : Control
         int palIdx = Math.Abs(PaletteIndex) % Palettes.Length;
         var currentPalette = Palettes[palIdx];
 
-        // High-contrast, clean unfilled cell styling
-        var emptyFillBrush = new SolidColorBrush(Color.FromArgb(20, 255, 255, 255));
-        var emptyBorderPen = new Pen(new SolidColorBrush(Color.FromArgb(70, 255, 255, 255)), 1.0);
-        var glassHighlightPen = new Pen(new SolidColorBrush(Color.FromArgb(50, 255, 255, 255)), 0.8);
+        // Theme-aware rendering for perfect aesthetic in both Light and Dark modes
+        bool isLight = ActualThemeVariant == Avalonia.Styling.ThemeVariant.Light;
+
+        IBrush emptyFillBrush;
+        Pen emptyBorderPen;
+        Pen glassHighlightPen;
+        byte fillBaseAlpha;
+        byte borderBaseAlpha;
+
+        if (isLight)
+        {
+            // Light Mode: visible subtle dark-slate outline on light card
+            emptyFillBrush = new SolidColorBrush(Color.FromArgb(8, 15, 23, 42));
+            emptyBorderPen = new Pen(new SolidColorBrush(Color.FromArgb(30, 15, 23, 42)), 1.0);
+            glassHighlightPen = new Pen(new SolidColorBrush(Color.FromArgb(60, 255, 255, 255)), 0.8);
+            fillBaseAlpha = 32;
+            borderBaseAlpha = 80;
+        }
+        else
+        {
+            // Dark Mode: soft, elegant translucent glass tile matrix
+            emptyFillBrush = new SolidColorBrush(Color.FromArgb(8, 255, 255, 255));
+            emptyBorderPen = new Pen(new SolidColorBrush(Color.FromArgb(24, 255, 255, 255)), 1.0);
+            glassHighlightPen = new Pen(new SolidColorBrush(Color.FromArgb(28, 255, 255, 255)), 0.8);
+            fillBaseAlpha = 36;
+            borderBaseAlpha = 85;
+        }
 
         int cellIndex = 0;
         for (int r = 0; r < rows; r++)
@@ -261,8 +284,8 @@ public class BlockProgressBackground : Control
                 if (cellIndex < filledCount)
                 {
                     // Fully filled glass cell with horizontal liquid gradient
-                    var fillBrush = new SolidColorBrush(Color.FromArgb(48, baseColor.R, baseColor.G, baseColor.B));
-                    var borderPen = new Pen(new SolidColorBrush(Color.FromArgb(120, baseColor.R, baseColor.G, baseColor.B)), 1.0);
+                    var fillBrush = new SolidColorBrush(Color.FromArgb(fillBaseAlpha, baseColor.R, baseColor.G, baseColor.B));
+                    var borderPen = new Pen(new SolidColorBrush(Color.FromArgb(borderBaseAlpha, baseColor.R, baseColor.G, baseColor.B)), 1.0);
 
                     context.DrawRectangle(fillBrush, borderPen, rrect);
                     context.DrawLine(glassHighlightPen, new Point(x + radius, y + 0.8), new Point(x + cell - radius, y + 0.8));
@@ -270,8 +293,8 @@ public class BlockProgressBackground : Control
                 else if (cellIndex == filledCount && fractionalCell > 0.05)
                 {
                     // Smoothly transitioning boundary cell
-                    byte fillAlpha = (byte)Math.Clamp(48 * fractionalCell, 12, 48);
-                    byte borderAlpha = (byte)Math.Clamp(120 * fractionalCell, 30, 120);
+                    byte fillAlpha = (byte)Math.Clamp(fillBaseAlpha * fractionalCell, 8, fillBaseAlpha);
+                    byte borderAlpha = (byte)Math.Clamp(borderBaseAlpha * fractionalCell, 20, borderBaseAlpha);
 
                     var fillBrush = new SolidColorBrush(Color.FromArgb(fillAlpha, baseColor.R, baseColor.G, baseColor.B));
                     var borderPen = new Pen(new SolidColorBrush(Color.FromArgb(borderAlpha, baseColor.R, baseColor.G, baseColor.B)), 1.0);
