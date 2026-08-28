@@ -1,0 +1,527 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:DownloaderApp.ViewModels"
+        xmlns:models="using:DownloaderApp.Models"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="1100" d:DesignHeight="700"
+        Width="1120" Height="720"
+        MinWidth="880" MinHeight="560"
+        x:Class="DownloaderApp.Views.MainWindow"
+        x:DataType="vm:MainViewModel"
+        Background="{DynamicResource AppBackgroundBrush}"
+        WindowStartupLocation="CenterScreen"
+        ExtendClientAreaToDecorationsHint="True"
+        ExtendClientAreaChromeHints="NoChrome"
+        ExtendClientAreaTitleBarHeightHint="-1"
+        Title="Downloader.io">
+
+    <Design.DataContext>
+        <vm:MainViewModel />
+    </Design.DataContext>
+
+    <Grid RowDefinitions="Auto, *" Background="{DynamicResource AppBackgroundBrush}">
+        <!-- ================= TOP CUSTOM TITLEBAR ================= -->
+        <Border Grid.Row="0"
+                Height="44"
+                Background="{DynamicResource SidebarBackgroundBrush}"
+                BorderBrush="{DynamicResource CardBorderBrush}"
+                BorderThickness="0,0,0,1"
+                Padding="16,0,8,0">
+            <Grid ColumnDefinitions="Auto, *, Auto, Auto">
+                <!-- App Logo & Title -->
+                <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                    <!-- Icon badge -->
+                    <Border Width="26" Height="26" CornerRadius="6" Background="{DynamicResource AccentBrush}">
+                        <PathIcon Width="14" Height="14" Foreground="#FFFFFF"
+                                  Data="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 14.59L8.7 12.3a.996.996 0 1 0-1.41 1.41l5 5c.39.39 1.02.39 1.41 0l5-5a.996.996 0 1 0-1.41-1.41L13 16.59V7c0-.55-.45-1-1-1s-1 .45-1 1v9.59z" />
+                    </Border>
+                    <TextBlock Text="Downloader" FontWeight="Bold" FontSize="14" Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center" />
+                    <TextBlock Text=".io" FontWeight="Bold" FontSize="14" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" Margin="-8,0,0,0" />
+                    <Border Background="{DynamicResource AccentSubtleBrush}" BorderBrush="{DynamicResource AccentSubtleBorderBrush}" BorderThickness="1" CornerRadius="4" Padding="6,2" Margin="6,0,0,0">
+                        <TextBlock Text="PRO" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" />
+                    </Border>
+                </StackPanel>
+
+                <!-- Live Speed Meter Center -->
+                <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="8">
+                    <Border Background="{DynamicResource CardBackgroundBrush}" BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1" CornerRadius="12" Padding="12,4">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <Ellipse Width="7" Height="7" Fill="{DynamicResource SuccessBrush}" VerticalAlignment="Center" />
+                            <TextBlock Text="Live Speed:" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center" />
+                            <TextBlock Text="{Binding TotalDownloadSpeedFormatted}" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" />
+                            <TextBlock Text="•" FontSize="11" Foreground="{DynamicResource TextMutedBrush}" VerticalAlignment="Center" />
+                            <TextBlock Text="{Binding TotalActiveCount, StringFormat='{}{0} active'}" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+
+                <!-- Theme Switcher & Actions -->
+                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center" Margin="0,0,16,0">
+                    <Button Classes="secondary" Command="{Binding ToggleThemeCommand}" Padding="10,5" CornerRadius="8">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <PathIcon Width="13" Height="13"
+                                      Foreground="{DynamicResource AccentBrush}"
+                                      Data="M12 3a9 9 0 1 0 9 9c0-.46-.04-.92-.1-1.36a5.389 5.389 0 0 1-4.4 2.26 5.403 5.403 0 0 1-3.14-9.8c-.44-.06-.9-.1-1.36-.1z" />
+                            <TextBlock Text="{Binding ThemeModeTitle}" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+
+                <!-- Window Control Buttons -->
+                <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="2" VerticalAlignment="Center">
+                    <Button Classes="ghost" Click="MinimizeWindow_Click" Width="32" Height="30" Padding="0">
+                        <PathIcon Width="10" Height="2" Foreground="{DynamicResource TextSecondaryBrush}" Data="M0 0 L10 0" />
+                    </Button>
+                    <Button Classes="ghost" Click="MaximizeWindow_Click" Width="32" Height="30" Padding="0">
+                        <PathIcon Width="10" Height="10" Foreground="{DynamicResource TextSecondaryBrush}" Data="M1 1 H9 V9 H1 Z" />
+                    </Button>
+                    <Button Classes="ghost" Click="CloseWindow_Click" Width="32" Height="30" Padding="0">
+                        <PathIcon Width="10" Height="10" Foreground="{DynamicResource DangerBrush}" Data="M1 1 L9 9 M9 1 L1 9" />
+                    </Button>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- ================= MAIN BODY WORKSPACE ================= -->
+        <Grid Grid.Row="1" ColumnDefinitions="240, *">
+            <!-- ================= LEFT SIDEBAR ================= -->
+            <Border Grid.Column="0"
+                    Background="{DynamicResource SidebarBackgroundBrush}"
+                    BorderBrush="{DynamicResource CardBorderBrush}"
+                    BorderThickness="0,0,1,0"
+                    Padding="16">
+                <Grid RowDefinitions="Auto, Auto, *, Auto">
+                    <!-- Top Action Buttons -->
+                    <StackPanel Grid.Row="0" Spacing="8" Margin="0,0,0,20">
+                        <Button Classes="primary" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Command="{Binding OpenAddModalCommand}" Height="38">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <PathIcon Width="14" Height="14" Foreground="#FFFFFF" Data="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
+                                <TextBlock Text="New Download" FontWeight="SemiBold" FontSize="13" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
+
+                        <Button Classes="secondary" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Command="{Binding PasteFromClipboardCommand}" Height="36">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <PathIcon Width="13" Height="13" Foreground="{DynamicResource AccentBrush}" Data="M19 2h-4.18C14.4.84 13.3 0 12 0c-1.3 0-2.4.84-2.82 2H5c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-7 0c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm7 18H5V4h2v3h10V4h2v16z" />
+                                <TextBlock Text="Paste from Clipboard" FontSize="12" FontWeight="Medium" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
+
+                    <!-- Navigation Filters -->
+                    <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
+                        <StackPanel Spacing="16">
+                            <!-- Status Category -->
+                            <StackPanel Spacing="4">
+                                <TextBlock Text="STATUS" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource TextMutedBrush}" Margin="8,0,0,4" />
+                                <Button Classes="nav-item" Command="{Binding SelectFilterCommand}" CommandParameter="All">
+                                    <Grid ColumnDefinitions="Auto, *, Auto">
+                                        <PathIcon Grid.Column="0" Width="14" Height="14" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,10,0" Data="M4 6h16v2H4zm0 5h16v2H4zm0 5h16v2H4z" />
+                                        <TextBlock Grid.Column="1" Text="All Downloads" VerticalAlignment="Center" />
+                                        <Border Grid.Column="2" Background="{DynamicResource BadgeBackgroundBrush}" CornerRadius="10" Padding="7,1">
+                                            <TextBlock Text="{Binding AllDownloads.Count}" FontSize="11" Foreground="{DynamicResource BadgeTextBrush}" />
+                                        </Border>
+                                    </Grid>
+                                </Button>
+
+                                <Button Classes="nav-item" Command="{Binding SelectFilterCommand}" CommandParameter="Downloading">
+                                    <Grid ColumnDefinitions="Auto, *, Auto">
+                                        <PathIcon Grid.Column="0" Width="14" Height="14" Foreground="{DynamicResource AccentBrush}" Margin="0,0,10,0" Data="M12 4v12m-6-6l6 6 6-6M4 20h16" />
+                                        <TextBlock Grid.Column="1" Text="Downloading" VerticalAlignment="Center" />
+                                        <Border Grid.Column="2" Background="{DynamicResource AccentSubtleBrush}" CornerRadius="10" Padding="7,1">
+                                            <TextBlock Text="{Binding TotalActiveCount}" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" />
+                                        </Border>
+                                    </Grid>
+                                </Button>
+
+                                <Button Classes="nav-item" Command="{Binding SelectFilterCommand}" CommandParameter="Completed">
+                                    <Grid ColumnDefinitions="Auto, *, Auto">
+                                        <PathIcon Grid.Column="0" Width="14" Height="14" Foreground="{DynamicResource SuccessBrush}" Margin="0,0,10,0" Data="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
+                                        <TextBlock Grid.Column="1" Text="Completed" VerticalAlignment="Center" />
+                                        <Border Grid.Column="2" Background="{DynamicResource SuccessSubtleBrush}" CornerRadius="10" Padding="7,1">
+                                            <TextBlock Text="{Binding TotalCompletedCount}" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource SuccessBrush}" />
+                                        </Border>
+                                    </Grid>
+                                </Button>
+
+                                <Button Classes="nav-item" Command="{Binding SelectFilterCommand}" CommandParameter="Paused">
+                                    <Grid ColumnDefinitions="Auto, *, Auto">
+                                        <PathIcon Grid.Column="0" Width="14" Height="14" Foreground="{DynamicResource WarningBrush}" Margin="0,0,10,0" Data="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
+                                        <TextBlock Grid.Column="1" Text="Paused" VerticalAlignment="Center" />
+                                    </Grid>
+                                </Button>
+
+                                <Button Classes="nav-item" Command="{Binding SelectFilterCommand}" CommandParameter="Failed">
+                                    <Grid ColumnDefinitions="Auto, *, Auto">
+                                        <PathIcon Grid.Column="0" Width="14" Height="14" Foreground="{DynamicResource DangerBrush}" Margin="0,0,10,0" Data="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" />
+                                        <TextBlock Grid.Column="1" Text="Failed / Error" VerticalAlignment="Center" />
+                                    </Grid>
+                                </Button>
+                            </StackPanel>
+
+                            <!-- Categories -->
+                            <StackPanel Spacing="4">
+                                <TextBlock Text="CATEGORIES" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource TextMutedBrush}" Margin="8,0,0,4" />
+                                <Button Classes="nav-item" Command="{Binding SelectCategoryCommand}" CommandParameter="All">
+                                    <StackPanel Orientation="Horizontal" Spacing="10">
+                                        <PathIcon Width="13" Height="13" Foreground="{DynamicResource TextSecondaryBrush}" Data="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z" />
+                                        <TextBlock Text="All Types" FontSize="12" VerticalAlignment="Center" />
+                                    </StackPanel>
+                                </Button>
+                                <Button Classes="nav-item" Command="{Binding SelectCategoryCommand}" CommandParameter="Compressed">
+                                    <StackPanel Orientation="Horizontal" Spacing="10">
+                                        <PathIcon Width="13" Height="13" Foreground="{DynamicResource AccentBrush}" Data="M20 6h-8l-2-2H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm-6 10H6v-2h8v2zm4-4H6v-2h12v2z" />
+                                        <TextBlock Text="Compressed (.zip, .rar)" FontSize="12" VerticalAlignment="Center" />
+                                    </StackPanel>
+                                </Button>
+                                <Button Classes="nav-item" Command="{Binding SelectCategoryCommand}" CommandParameter="Programs">
+                                    <StackPanel Orientation="Horizontal" Spacing="10">
+                                        <PathIcon Width="13" Height="13" Foreground="{DynamicResource SuccessBrush}" Data="M4 8h16v12H4z M8 4h8v4H8z" />
+                                        <TextBlock Text="Programs &amp; Executables" FontSize="12" VerticalAlignment="Center" />
+                                    </StackPanel>
+                                </Button>
+                                <Button Classes="nav-item" Command="{Binding SelectCategoryCommand}" CommandParameter="Media">
+                                    <StackPanel Orientation="Horizontal" Spacing="10">
+                                        <PathIcon Width="13" Height="13" Foreground="{DynamicResource WarningBrush}" Data="M18 4l2 4h-3l-2-4h-2l2 4h-3l-2-4H8l2 4H7L5 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4h-4z" />
+                                        <TextBlock Text="Media &amp; Videos" FontSize="12" VerticalAlignment="Center" />
+                                    </StackPanel>
+                                </Button>
+                                <Button Classes="nav-item" Command="{Binding SelectCategoryCommand}" CommandParameter="Documents">
+                                    <StackPanel Orientation="Horizontal" Spacing="10">
+                                        <PathIcon Width="13" Height="13" Foreground="{DynamicResource TextSecondaryBrush}" Data="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z" />
+                                        <TextBlock Text="Documents" FontSize="12" VerticalAlignment="Center" />
+                                    </StackPanel>
+                                </Button>
+                            </StackPanel>
+                        </StackPanel>
+                    </ScrollViewer>
+
+                    <!-- Sidebar Footer System Info -->
+                    <Border Grid.Row="3" Background="{DynamicResource CardBackgroundBrush}" BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,12,0,0">
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="Downloader.io Core v1.0" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" />
+                            <TextBlock Text="Ready for fast multi-part downloads." FontSize="10" Foreground="{DynamicResource TextMutedBrush}" TextWrapping="Wrap" />
+                        </StackPanel>
+                    </Border>
+                </Grid>
+            </Border>
+
+            <!-- ================= MAIN CONTENT LIST ================= -->
+            <Grid Grid.Column="1" RowDefinitions="Auto, *">
+                <!-- Top Toolbar & Search Area -->
+                <Border Grid.Row="0"
+                        Background="{DynamicResource AppBackgroundBrush}"
+                        BorderBrush="{DynamicResource CardBorderBrush}"
+                        BorderThickness="0,0,0,1"
+                        Padding="20,14">
+                    <Grid ColumnDefinitions="*, Auto">
+                        <!-- Search Bar -->
+                        <Grid Grid.Column="0" MaxWidth="480" HorizontalAlignment="Left">
+                            <TextBox Classes="modern"
+                                     Text="{Binding SearchQuery}"
+                                     Watermark="Search files, URLs or extensions..."
+                                     Width="380"
+                                     Padding="32,8,12,8" />
+                            <PathIcon Width="14" Height="14"
+                                      Foreground="{DynamicResource TextMutedBrush}"
+                                      HorizontalAlignment="Left"
+                                      Margin="12,0,0,0"
+                                      Data="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z" />
+                        </Grid>
+
+                        <!-- Batch Action Buttons -->
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                            <Button Classes="ghost" Command="{Binding ResumeAllCommand}" ToolTip.Tip="Resume all paused downloads">
+                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                    <PathIcon Width="12" Height="12" Foreground="{DynamicResource SuccessBrush}" Data="M8 5v14l11-7z" />
+                                    <TextBlock Text="Resume All" FontSize="12" />
+                                </StackPanel>
+                            </Button>
+
+                            <Button Classes="ghost" Command="{Binding PauseAllCommand}" ToolTip.Tip="Pause all running downloads">
+                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                    <PathIcon Width="12" Height="12" Foreground="{DynamicResource WarningBrush}" Data="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
+                                    <TextBlock Text="Pause All" FontSize="12" />
+                                </StackPanel>
+                            </Button>
+
+                            <Button Classes="ghost" Command="{Binding ClearCompletedCommand}" ToolTip.Tip="Clear completed downloads from queue">
+                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                    <PathIcon Width="12" Height="12" Foreground="{DynamicResource TextSecondaryBrush}" Data="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
+                                    <TextBlock Text="Clear Completed" FontSize="12" />
+                                </StackPanel>
+                            </Button>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+
+                <!-- Download Items List / Queue View -->
+                <Grid Grid.Row="1">
+                    <!-- List of items -->
+                    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="20,16">
+                        <ItemsControl ItemsSource="{Binding DisplayedDownloads}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate DataType="models:DownloadItem">
+                                    <Border Background="{DynamicResource CardBackgroundBrush}"
+                                            BorderBrush="{DynamicResource CardBorderBrush}"
+                                            BorderThickness="1"
+                                            CornerRadius="10"
+                                            Margin="0,0,0,12"
+                                            Padding="16,14">
+                                        <Grid RowDefinitions="Auto, Auto, Auto">
+                                            <!-- Top Row: File Details, Source & Status Badge -->
+                                            <Grid Grid.Row="0" ColumnDefinitions="Auto, *, Auto" Margin="0,0,0,10">
+                                                <!-- Category Icon -->
+                                                <Border Grid.Column="0" Width="38" Height="38" CornerRadius="8" Background="{DynamicResource AccentSubtleBrush}" BorderBrush="{DynamicResource AccentSubtleBorderBrush}" BorderThickness="1" Margin="0,0,12,0">
+                                                    <PathIcon Width="18" Height="18" Foreground="{DynamicResource AccentBrush}" Data="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z" />
+                                                </Border>
+
+                                                <!-- File Name & URL Source -->
+                                                <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                                                    <TextBlock Text="{Binding FileName}" FontWeight="SemiBold" FontSize="14" Foreground="{DynamicResource TextPrimaryBrush}" TextTrimming="CharacterEllipsis" />
+                                                    <TextBlock Text="{Binding Url}" FontSize="11" Foreground="{DynamicResource TextMutedBrush}" TextTrimming="CharacterEllipsis" MaxWidth="540" />
+                                                </StackPanel>
+
+                                                <!-- Status Badge & Speed Pill -->
+                                                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                                    <!-- Error indicator -->
+                                                    <TextBlock Text="{Binding ErrorMessage}" IsVisible="{Binding ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" FontSize="11" Foreground="{DynamicResource DangerBrush}" VerticalAlignment="Center" />
+
+                                                    <!-- Status Badge -->
+                                                    <Border Background="{DynamicResource BadgeBackgroundBrush}" CornerRadius="6" Padding="10,4">
+                                                        <TextBlock Text="{Binding StatusDisplayText}" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource TextSecondaryBrush}" />
+                                                    </Border>
+                                                </StackPanel>
+                                            </Grid>
+
+                                            <!-- Middle Row: Modern Progress Bar -->
+                                            <ProgressBar Grid.Row="1"
+                                                         Classes="modern"
+                                                         Value="{Binding ProgressPercentage}"
+                                                         Minimum="0"
+                                                         Maximum="100"
+                                                         Margin="0,2,0,8" />
+
+                                            <!-- Bottom Row: Metrics & Item Action Buttons -->
+                                            <Grid Grid.Row="2" ColumnDefinitions="Auto, *, Auto">
+                                                <!-- Download stats (Size, Speed, ETA, Percentage) -->
+                                                <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+                                                    <!-- Percentage -->
+                                                    <TextBlock Text="{Binding ProgressPercentage, StringFormat='{}{0:0.#}%'}" FontWeight="Bold" FontSize="12" Foreground="{DynamicResource AccentBrush}" />
+
+                                                    <!-- Size -->
+                                                    <TextBlock Text="{Binding FormattedSize}" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" />
+
+                                                    <!-- Speed -->
+                                                    <TextBlock Text="{Binding FormattedSpeed}" IsVisible="{Binding FormattedSpeed, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource SuccessBrush}" />
+
+                                                    <!-- ETA -->
+                                                    <TextBlock Text="{Binding FormattedEta}" IsVisible="{Binding FormattedEta, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" FontSize="11" Foreground="{DynamicResource TextMutedBrush}" />
+                                                </StackPanel>
+
+                                                <!-- Action Buttons for this item -->
+                                                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4">
+                                                    <!-- Pause button -->
+                                                    <Button Classes="ghost"
+                                                            IsVisible="{Binding CanPause}"
+                                                            Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).PauseDownloadCommand}"
+                                                            CommandParameter="{Binding}"
+                                                            ToolTip.Tip="Pause download">
+                                                        <PathIcon Width="12" Height="12" Foreground="{DynamicResource WarningBrush}" Data="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
+                                                    </Button>
+
+                                                    <!-- Resume / Start button -->
+                                                    <Button Classes="ghost"
+                                                            IsVisible="{Binding CanResume}"
+                                                            Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).StartDownloadCommand}"
+                                                            CommandParameter="{Binding}"
+                                                            ToolTip.Tip="Resume download">
+                                                        <PathIcon Width="12" Height="12" Foreground="{DynamicResource SuccessBrush}" Data="M8 5v14l11-7z" />
+                                                    </Button>
+
+                                                    <!-- Open File (when completed) -->
+                                                    <Button Classes="ghost"
+                                                            IsVisible="{Binding IsCompleted}"
+                                                            Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).OpenFileCommand}"
+                                                            CommandParameter="{Binding}"
+                                                            ToolTip.Tip="Open downloaded file">
+                                                        <PathIcon Width="12" Height="12" Foreground="{DynamicResource AccentBrush}" Data="M19 19H5V5h7V3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z" />
+                                                    </Button>
+
+                                                    <!-- Open Containing Folder -->
+                                                    <Button Classes="ghost"
+                                                            Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).OpenFolderCommand}"
+                                                            CommandParameter="{Binding}"
+                                                            ToolTip.Tip="Open folder in File Explorer">
+                                                        <PathIcon Width="12" Height="12" Foreground="{DynamicResource TextSecondaryBrush}" Data="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z" />
+                                                    </Button>
+
+                                                    <!-- Copy Link -->
+                                                    <Button Classes="ghost"
+                                                            Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).CopyUrlCommand}"
+                                                            CommandParameter="{Binding}"
+                                                            ToolTip.Tip="Copy download link">
+                                                        <PathIcon Width="12" Height="12" Foreground="{DynamicResource TextSecondaryBrush}" Data="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z" />
+                                                    </Button>
+
+                                                    <!-- Delete / Remove -->
+                                                    <Button Classes="danger"
+                                                            Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).DeleteDownloadCommand}"
+                                                            CommandParameter="{Binding}"
+                                                            Padding="6,4"
+                                                            ToolTip.Tip="Remove from list">
+                                                        <PathIcon Width="12" Height="12" Foreground="{DynamicResource DangerBrush}" Data="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z" />
+                                                    </Button>
+                                                </StackPanel>
+                                            </Grid>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+
+                    <!-- Empty State View -->
+                    <StackPanel HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                Spacing="16"
+                                IsVisible="{Binding !DisplayedDownloads.Count}">
+                        <Border Width="64" Height="64" CornerRadius="16" Background="{DynamicResource AccentSubtleBrush}" BorderBrush="{DynamicResource AccentSubtleBorderBrush}" BorderThickness="1" HorizontalAlignment="Center">
+                            <PathIcon Width="28" Height="28" Foreground="{DynamicResource AccentBrush}" Data="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM17 13l-5 5-5-5h3V9h4v4h3z" />
+                        </Border>
+                        <StackPanel Spacing="4" HorizontalAlignment="Center">
+                            <TextBlock Text="No downloads found" FontSize="16" FontWeight="SemiBold" HorizontalAlignment="Center" Foreground="{DynamicResource TextPrimaryBrush}" />
+                            <TextBlock Text="Paste a link from your clipboard or click '+ New Download' to start." FontSize="12" HorizontalAlignment="Center" Foreground="{DynamicResource TextMutedBrush}" />
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
+                            <Button Classes="primary" Command="{Binding OpenAddModalCommand}">
+                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                    <PathIcon Width="12" Height="12" Foreground="#FFFFFF" Data="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
+                                    <TextBlock Text="Add Link" FontSize="12" />
+                                </StackPanel>
+                            </Button>
+                            <Button Classes="secondary" Command="{Binding PasteFromClipboardCommand}">
+                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                    <PathIcon Width="12" Height="12" Foreground="{DynamicResource AccentBrush}" Data="M19 2h-4.18C14.4.84 13.3 0 12 0c-1.3 0-2.4.84-2.82 2H5c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z" />
+                                    <TextBlock Text="Paste Clipboard" FontSize="12" />
+                                </StackPanel>
+                            </Button>
+                        </StackPanel>
+                    </StackPanel>
+                </Grid>
+            </Grid>
+        </Grid>
+
+        <!-- ================= FLOATING ACTION NOTIFICATION TOAST ================= -->
+        <Border Grid.Row="1"
+                IsVisible="{Binding HasNotification}"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Bottom"
+                Margin="0,0,0,24"
+                Background="{DynamicResource CardBackgroundBrush}"
+                BorderBrush="{DynamicResource AccentBrush}"
+                BorderThickness="1"
+                CornerRadius="8"
+                Padding="16,10"
+                BoxShadow="0 8 24 #33000000">
+            <StackPanel Orientation="Horizontal" Spacing="10">
+                <PathIcon Width="14" Height="14" Foreground="{DynamicResource AccentBrush}" Data="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" />
+                <TextBlock Text="{Binding QuickNotification}" FontWeight="Medium" FontSize="13" Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center" />
+            </StackPanel>
+        </Border>
+
+        <!-- ================= ADD DOWNLOAD MODAL OVERLAY ================= -->
+        <Border Grid.Row="0" Grid.RowSpan="2"
+                IsVisible="{Binding IsAddModalOpen}"
+                Background="{DynamicResource ModalOverlayBrush}">
+            <Border Background="{DynamicResource CardBackgroundBrush}"
+                    BorderBrush="{DynamicResource CardBorderBrush}"
+                    BorderThickness="1"
+                    CornerRadius="14"
+                    Width="560"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    Padding="24"
+                    DataContext="{Binding AddDialogVm}">
+                <Grid RowDefinitions="Auto, Auto, Auto, Auto, Auto, Auto">
+                    <!-- Modal Header -->
+                    <Grid Grid.Row="0" ColumnDefinitions="*, Auto" Margin="0,0,0,16">
+                        <StackPanel Grid.Column="0" Spacing="4">
+                            <TextBlock Text="Add New Download" FontSize="18" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}" />
+                            <TextBlock Text="Enter one or multiple HTTP/HTTPS download URLs below." FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
+                        </StackPanel>
+                        <Button Grid.Column="1" Classes="ghost" Command="{Binding CancelCommand}" Padding="6">
+                            <PathIcon Width="12" Height="12" Foreground="{DynamicResource TextSecondaryBrush}" Data="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
+                        </Button>
+                    </Grid>
+
+                    <!-- URL Input Box -->
+                    <StackPanel Grid.Row="1" Spacing="6" Margin="0,0,0,14">
+                        <Grid ColumnDefinitions="*, Auto">
+                            <TextBlock Grid.Column="0" Text="Download Links (one per line):" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" />
+                            <Button Grid.Column="1" Classes="ghost" Command="{Binding PasteFromClipboardCommand}" Padding="6,2">
+                                <StackPanel Orientation="Horizontal" Spacing="4">
+                                    <PathIcon Width="11" Height="11" Foreground="{DynamicResource AccentBrush}" Data="M19 2h-4.18C14.4.84 13.3 0 12 0c-1.3 0-2.4.84-2.82 2H5c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z" />
+                                    <TextBlock Text="Paste Clipboard" FontSize="11" Foreground="{DynamicResource AccentBrush}" />
+                                </StackPanel>
+                            </Button>
+                        </Grid>
+                        <TextBox Classes="modern"
+                                 Text="{Binding UrlInput}"
+                                 AcceptsReturn="True"
+                                 Height="80"
+                                 TextWrapping="Wrap"
+                                 Watermark="https://example.com/file.zip&#x0a;https://example.com/movie.mp4" />
+                    </StackPanel>
+
+                    <!-- Custom File Name (Single URL) -->
+                    <StackPanel Grid.Row="2" Spacing="6" Margin="0,0,0,14">
+                        <TextBlock Text="File Name (optional):" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" />
+                        <TextBox Classes="modern"
+                                 Text="{Binding CustomFileName}"
+                                 Watermark="Auto-detected from URL..." />
+                    </StackPanel>
+
+                    <!-- Save Directory -->
+                    <StackPanel Grid.Row="3" Spacing="6" Margin="0,0,0,16">
+                        <TextBlock Text="Save To Folder:" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" />
+                        <TextBox Classes="modern"
+                                 Text="{Binding SaveDirectory}" />
+                    </StackPanel>
+
+                    <!-- Immediate Download Option -->
+                    <CheckBox Grid.Row="4"
+                              IsChecked="{Binding StartImmediately}"
+                              Content="Start downloading immediately after adding"
+                              FontSize="12"
+                              Margin="0,0,0,14" />
+
+                    <!-- Status Message & Buttons -->
+                    <Grid Grid.Row="5" ColumnDefinitions="*, Auto, Auto">
+                        <TextBlock Grid.Column="0"
+                                   Text="{Binding StatusMessage}"
+                                   IsVisible="{Binding StatusMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                                   Foreground="{DynamicResource DangerBrush}"
+                                   FontSize="12"
+                                   VerticalAlignment="Center"
+                                   TextWrapping="Wrap" />
+
+                        <Button Grid.Column="1"
+                                Classes="ghost"
+                                Command="{Binding CancelCommand}"
+                                Content="Cancel"
+                                Margin="0,0,8,0"
+                                Padding="16,8" />
+
+                        <Button Grid.Column="2"
+                                Classes="primary"
+                                Command="{Binding ConfirmCommand}"
+                                Content="Download Now"
+                                Padding="18,8" />
+                    </Grid>
+                </Grid>
+            </Border>
+        </Border>
+    </Grid>
+</Window>
