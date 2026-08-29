@@ -62,8 +62,25 @@ public class ClipboardSnifferService : IClipboardSnifferService
     {
         if (!_timer.IsEnabled)
         {
+            // Seed current clipboard content so existing stale links do not trigger popup on startup
+            Task.Run(async () =>
+            {
+                try
+                {
+                    var initialText = await _clipboardService.GetTextAsync();
+                    if (!string.IsNullOrWhiteSpace(initialText))
+                    {
+                        _lastSeenClipboard = initialText;
+                    }
+                }
+                catch
+                {
+                    // Ignore initial access error
+                }
+            });
+
             _timer.Start();
-            Logger.Debug("[SNIFFER] Clipboard sniffer active.");
+            Logger.Debug("[SNIFFER] Clipboard sniffer active (ignoring pre-existing clipboard content).");
         }
     }
 
