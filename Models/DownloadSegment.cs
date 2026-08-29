@@ -1,4 +1,5 @@
 using System;
+using System.Text.Json.Serialization;
 using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace DownloaderApp.Models;
@@ -26,9 +27,13 @@ public partial class DownloadSegment : ObservableObject
     [ObservableProperty]
     private bool _isCompleted;
 
+    [JsonIgnore]
     public long TotalBytes => (EndByte >= StartByte) ? (EndByte - StartByte + 1) : -1;
+
+    [JsonIgnore]
     public long CurrentOffset => StartByte + DownloadedBytes;
 
+    [JsonIgnore]
     public double ProgressPercentage
     {
         get
@@ -39,19 +44,33 @@ public partial class DownloadSegment : ObservableObject
         }
     }
 
+    [JsonIgnore]
     public string FormattedStartPoint => DownloadItem.FormatBytes(StartByte);
+
+    [JsonIgnore]
     public string FormattedEndPoint => DownloadItem.FormatBytes(EndByte);
+
+    [JsonIgnore]
     public string FormattedCurrentOffset => DownloadItem.FormatBytes(CurrentOffset);
+
+    [JsonIgnore]
     public string FormattedDownloaded => DownloadItem.FormatBytes(DownloadedBytes);
+
+    [JsonIgnore]
     public string FormattedSegmentSize => DownloadItem.FormatBytes(TotalBytes);
+
+    [JsonIgnore]
     public string FormattedRange => $"{FormattedStartPoint} → {FormattedEndPoint}";
 
+    [JsonIgnore]
     public string FormattedProgress => TotalBytes > 0 
         ? $"{FormattedDownloaded} / {FormattedSegmentSize} ({ProgressPercentage:0.#}%)"
         : $"{FormattedDownloaded}";
 
+    [JsonIgnore]
     public string FormattedSpeed => SpeedBytesPerSec > 0 ? $"{DownloadItem.FormatBytes((long)SpeedBytesPerSec)}/s" : "-";
 
+    [JsonIgnore]
     public string StatusText => IsCompleted ? "Finished" : (IsActive ? "Downloading" : "Connecting");
 
     public void UpdateMetrics(long downloaded, double speed)

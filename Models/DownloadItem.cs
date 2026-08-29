@@ -1,6 +1,7 @@
 using System;
 using System.Collections.ObjectModel;
 using System.IO;
+using System.Text.Json.Serialization;
 using System.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 
@@ -82,16 +83,24 @@ public partial class DownloadItem : ObservableObject
     [ObservableProperty]
     private int _retryAttempts = 0;
 
-    public ObservableCollection<DownloadSegment> Segments { get; } = new();
+    public ObservableCollection<DownloadSegment> Segments { get; set; } = new();
 
+    [JsonIgnore]
     public string FullPath => Path.Combine(SaveDirectory, FileName);
+
+    [JsonIgnore]
     public string PartialPath => $"{FullPath}.downloaderio";
+
+    [JsonIgnore]
     public string SegmentsMetaPath => $"{FullPath}.downloaderio.meta";
 
+    [JsonIgnore]
     public CancellationTokenSource? Cts { get; set; }
 
+    [JsonIgnore]
     public DownloadCategory Category => DetermineCategory(FileName);
 
+    [JsonIgnore]
     public string FormattedSize
     {
         get
@@ -102,6 +111,7 @@ public partial class DownloadItem : ObservableObject
         }
     }
 
+    [JsonIgnore]
     public string FormattedPercentageText
     {
         get
@@ -114,6 +124,7 @@ public partial class DownloadItem : ObservableObject
         }
     }
 
+    [JsonIgnore]
     public string FormattedSpeed
     {
         get
@@ -124,6 +135,7 @@ public partial class DownloadItem : ObservableObject
         }
     }
 
+    [JsonIgnore]
     public string FormattedEta
     {
         get
@@ -150,6 +162,7 @@ public partial class DownloadItem : ObservableObject
         }
     }
 
+    [JsonIgnore]
     public string StatusDisplayText => Status switch
     {
         DownloadStatus.Queued => IsScheduled ? $"Scheduled for {ScheduledStartTime:HH:mm}" : "Queued",
@@ -162,11 +175,22 @@ public partial class DownloadItem : ObservableObject
         _ => Status.ToString()
     };
 
+    [JsonIgnore]
     public bool IsActive => Status == DownloadStatus.Downloading || Status == DownloadStatus.Connecting;
+
+    [JsonIgnore]
     public bool IsConnecting => Status == DownloadStatus.Connecting;
+
+    [JsonIgnore]
     public bool IsIndeterminate => TotalBytes <= 0 && Status == DownloadStatus.Downloading;
+
+    [JsonIgnore]
     public bool CanPause => Status == DownloadStatus.Downloading || Status == DownloadStatus.Connecting;
+
+    [JsonIgnore]
     public bool CanResume => Status == DownloadStatus.Paused || Status == DownloadStatus.Failed || (Status == DownloadStatus.Queued && IsScheduled);
+
+    [JsonIgnore]
     public bool IsCompleted => Status == DownloadStatus.Completed;
 
     public void UpdateProgressMetrics(long downloaded, long total, double progressPct, double smoothedSpeed, bool updateSpeedDisplay)
@@ -222,10 +246,10 @@ public partial class DownloadItem : ObservableObject
         var ext = Path.GetExtension(fileName).ToLowerInvariant();
         return ext switch
         {
-            ".zip" or ".rar" or ".7z" or ".tar" or ".gz" or ".bz2" or ".iso" => DownloadCategory.Compressed,
-            ".exe" or ".msi" or ".bat" or ".cmd" or ".ps1" or ".apk" or ".dmg" or ".pkg" => DownloadCategory.Programs,
+            ".zip" or ".rar" or ".7z" or ".tar" or ".gz" or ".bz2" or ".iso" or ".img" => DownloadCategory.Compressed,
+            ".exe" or ".msi" or ".bat" or ".cmd" or ".ps1" or ".apk" or ".dmg" or ".pkg" or ".deb" or ".rpm" or ".whl" => DownloadCategory.Programs,
             ".mp4" or ".mkv" or ".avi" or ".mov" or ".webm" or ".mp3" or ".flac" or ".wav" or ".aac" or ".jpg" or ".jpeg" or ".png" or ".gif" or ".webp" or ".svg" => DownloadCategory.Media,
-            ".pdf" or ".doc" or ".docx" or ".xls" or ".xlsx" or ".ppt" or ".pptx" or ".txt" or ".md" or ".csv" or ".json" or ".xml" => DownloadCategory.Documents,
+            ".pdf" or ".doc" or ".docx" or ".xls" or ".xlsx" or ".ppt" or ".pptx" or ".txt" or ".md" or ".csv" or ".json" or ".xml" or ".epub" => DownloadCategory.Documents,
             _ => DownloadCategory.Other
         };
     }

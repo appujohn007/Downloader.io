@@ -151,6 +151,8 @@ public partial class MainViewModel : ViewModelBase
     private readonly DispatcherTimer _statsTimer;
     private readonly DispatcherTimer _scheduleTimer;
     private readonly DispatcherTimer _notificationTimer;
+    private readonly IDownloadPersistenceService _persistenceService;
+    private DateTime _lastSavedTime = DateTime.MinValue;
     private bool _hasExecutedPowerAction = false;
 
     public MainViewModel(
@@ -160,7 +162,8 @@ public partial class MainViewModel : ViewModelBase
         ISettingsService settingsService,
         IAudioNotificationService? audioService = null,
         IPowerService? powerService = null,
-        IClipboardSnifferService? snifferService = null)
+        IClipboardSnifferService? snifferService = null,
+        IDownloadPersistenceService? persistenceService = null)
     {
         _downloadService = downloadService;
         _clipboardService = clipboardService;
@@ -169,6 +172,7 @@ public partial class MainViewModel : ViewModelBase
         _audioService = audioService ?? new AudioNotificationService(_settingsService);
         _powerService = powerService ?? new PowerService();
         _snifferService = snifferService ?? new ClipboardSnifferService(_clipboardService, _settingsService);
+        _persistenceService = persistenceService ?? new DownloadPersistenceService();
 
         _settings = _settingsService.LoadSettings();
         IsDarkMode = _settings.IsDarkMode;
@@ -224,6 +228,13 @@ public partial class MainViewModel : ViewModelBase
             _notificationTimer.Stop();
         };
 
+        // Load and restore persistent downloads
+        var savedDownloads = _persistenceService.LoadDownloads();
+        foreach (var item in savedDownloads)
+        {
+            AllDownloads.Add(item);
+        }
+
         ApplyFilter();
     }
 
@@ -231,7 +242,11 @@ public partial class MainViewModel : ViewModelBase
         new DownloadService(),
         new ClipboardService(),
         new FileService(),
-        new SettingsService())
+        new SettingsService(),
+        null,
+        null,
+        null,
+        new DownloadPersistenceService())
     {
     }
 
@@ -333,12 +348,20 @@ public partial class MainViewModel : ViewModelBase
         CurrentAggregateSpeed = totalSpeed;
         TotalDownloadSpeedFormatted = totalSpeed > 0 ? $"{DownloadItem.FormatBytes((long)totalSpeed)}/s" : "0 B/s";
 
+        // Periodic debounced auto-save during active downloads
+        if (active > 0 && (DateTime.Now - _lastSavedTime).TotalSeconds >= 4)
+        {
+            SaveDownloadsState();
+            _lastSavedTime = DateTime.Now;
+        }
+
         // Check power management automation
         if (active == 0 && AllDownloads.Count > 0 && SelectedPostDownloadAction != PostDownloadAction.None && !_hasExecutedPowerAction)
         {
             bool allFinished = AllDownloads.All(x => x.Status == DownloadStatus.Completed || x.Status == DownloadStatus.Failed || x.Status == DownloadStatus.Canceled);
             if (allFinished)
             {
+                SaveDownloadsState();
                 _hasExecutedPowerAction = true;
                 _powerService.ExecuteAction(SelectedPostDownloadAction);
             }
@@ -403,6 +426,7 @@ public partial class MainViewModel : ViewModelBase
                 _ = _downloadService.StartDownloadAsync(item);
             }
             ApplyFilter();
+            SaveDownloadsState();
             ShowNotification($"Added & started {urls.Count} download(s)");
         }
     }
@@ -468,6 +492,7 @@ public partial class MainViewModel : ViewModelBase
         }
 
         ApplyFilter();
+        SaveDownloadsState();
         ShowNotification($"Added {items.Count} item{(items.Count > 1 ? "s" : "")} to download queue");
     }
 
@@ -661,6 +686,7 @@ public partial class MainViewModel : ViewModelBase
         if (item == null) return;
         _downloadService.ResumeDownload(item);
         ApplyFilter();
+        SaveDownloadsState();
     }
 
     [RelayCommand]
@@ -669,6 +695,7 @@ public partial class MainViewModel : ViewModelBase
         if (item == null) return;
         _downloadService.PauseDownload(item);
         ApplyFilter();
+        SaveDownloadsState();
     }
 
     [RelayCommand]
@@ -677,6 +704,7 @@ public partial class MainViewModel : ViewModelBase
         if (item == null) return;
         _downloadService.CancelDownload(item);
         ApplyFilter();
+        SaveDownloadsState();
     }
 
     [RelayCommand]
@@ -685,8 +713,13 @@ public partial class MainViewModel : ViewModelBase
         if (item == null) return;
         _downloadService.CancelDownload(item);
         AllDownloads.Remove(item);
-        if (InspectedItem == item) IsInspectorOpen = false;
+        if (InspectedItem == item)
+        {
+            InspectedItem = null;
+            IsInspectorOpen = false;
+        }
         ApplyFilter();
+        SaveDownloadsState();
     }
 
     [RelayCommand]
@@ -722,6 +755,7 @@ public partial class MainViewModel : ViewModelBase
             }
         }
         ApplyFilter();
+        SaveDownloadsState();
         ShowNotification("All active downloads paused");
     }
 
@@ -736,6 +770,7 @@ public partial class MainViewModel : ViewModelBase
             }
         }
         ApplyFilter();
+        SaveDownloadsState();
         ShowNotification("All paused downloads resumed");
     }
 
@@ -748,7 +783,13 @@ public partial class MainViewModel : ViewModelBase
             AllDownloads.Remove(item);
         }
         ApplyFilter();
+        SaveDownloadsState();
         ShowNotification($"Cleared {completedList.Count} completed download{(completedList.Count > 1 ? "s" : "")}");
+    }
+
+    public void SaveDownloadsState()
+    {
+        _persistenceService.SaveDownloads(AllDownloads);
     }
 
     [RelayCommand]
