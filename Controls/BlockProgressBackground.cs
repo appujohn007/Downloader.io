@@ -1,8 +1,12 @@
 using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Linq;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Media;
 using Avalonia.Threading;
+using DownloaderApp.Models;
 
 namespace DownloaderApp.Controls;
 
@@ -37,6 +41,9 @@ public class BlockProgressBackground : Control
 
     public static readonly StyledProperty<bool> IsDarkModeProperty =
         AvaloniaProperty.Register<BlockProgressBackground, bool>(nameof(IsDarkMode), true);
+
+    public static readonly StyledProperty<IEnumerable?> SegmentsProperty =
+        AvaloniaProperty.Register<BlockProgressBackground, IEnumerable?>(nameof(Segments), null);
 
     private double _animatedProgress = 0.0;
     private bool _isInitialized = false;
@@ -81,7 +88,8 @@ public class BlockProgressBackground : Control
             CellSizeProperty,
             CellGapProperty,
             CellCornerRadiusProperty,
-            IsDarkModeProperty);
+            IsDarkModeProperty,
+            SegmentsProperty);
     }
 
     public BlockProgressBackground()
@@ -153,6 +161,12 @@ public class BlockProgressBackground : Control
         set => SetValue(IsDarkModeProperty, value);
     }
 
+    public IEnumerable? Segments
+    {
+        get => GetValue(SegmentsProperty);
+        set => SetValue(SegmentsProperty, value);
+    }
+
     protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
     {
         base.OnPropertyChanged(change);
@@ -166,7 +180,7 @@ public class BlockProgressBackground : Control
             }
             EnsureAnimationRunning();
         }
-        else if (change.Property == IsActiveProperty || change.Property == IsConnectingProperty || change.Property == IsIndeterminateProperty)
+        else if (change.Property == IsActiveProperty || change.Property == IsConnectingProperty || change.Property == IsIndeterminateProperty || change.Property == SegmentsProperty)
         {
             EnsureAnimationRunning();
         }
@@ -201,7 +215,6 @@ public class BlockProgressBackground : Control
     {
         bool needsRedraw = false;
 
-        // Smooth continuous 60fps liquid damping interpolation
         double target = Math.Clamp(Progress, 0.0, 100.0);
         double diff = target - _animatedProgress;
 
@@ -218,8 +231,7 @@ public class BlockProgressBackground : Control
             needsRedraw = true;
         }
 
-        // Connecting wave or indeterminate live stream animation phase
-        if (IsConnecting || IsIndeterminate)
+        if (IsConnecting || IsIndeterminate || (IsActive && Segments != null))
         {
             _animPhase = (_animPhase + 0.07) % (Math.PI * 2.0);
             needsRedraw = true;
@@ -229,7 +241,7 @@ public class BlockProgressBackground : Control
         {
             InvalidateVisual();
         }
-        else if (!IsConnecting && !IsIndeterminate && Math.Abs(_animatedProgress - target) <= 0.01)
+        else if (!IsConnecting && !IsIndeterminate && !IsActive && Math.Abs(_animatedProgress - target) <= 0.01)
         {
             _animTimer.Stop();
         }
@@ -247,7 +259,6 @@ public class BlockProgressBackground : Control
         double nominalStep = nominalSize + gap;
         double radius = CellCornerRadius >= 0 ? CellCornerRadius : 1.5;
 
-        // Dynamically compute exact integer columns and rows to seamlessly span 100% of bounds
         int cols = Math.Max(1, (int)Math.Round((bounds.Width + gap) / nominalStep));
         int rows = Math.Max(1, (int)Math.Round((bounds.Height + gap) / nominalStep));
 
@@ -259,17 +270,9 @@ public class BlockProgressBackground : Control
 
         int totalCells = cols * rows;
 
-        // Fill cell-by-cell sequentially to the right row by row based on percentage
-        double pct = Math.Clamp(_animatedProgress, 0.0, 100.0);
-        double exactFilled = (pct / 100.0) * totalCells;
-        int filledCount = (int)Math.Floor(exactFilled);
-        double fractionalCell = exactFilled - filledCount;
-
-        // Select palette cleanly from PaletteIndex
         int palIdx = Math.Abs(PaletteIndex) % Palettes.Length;
         var currentPalette = Palettes[palIdx];
 
-        // Theme-aware rendering: transparent, non-distracting unfilled matrix
         bool isLight = ActualThemeVariant == Avalonia.Styling.ThemeVariant.Light;
 
         IBrush emptyFillBrush;
@@ -282,7 +285,6 @@ public class BlockProgressBackground : Control
 
         if (isLight)
         {
-            // Light Mode: subtle, transparent outline
             baseUnfilledFillAlpha = 4;
             baseUnfilledBorderAlpha = 16;
             emptyFillBrush = new SolidColorBrush(Color.FromArgb(baseUnfilledFillAlpha, 15, 23, 42));
@@ -293,7 +295,6 @@ public class BlockProgressBackground : Control
         }
         else
         {
-            // Dark Mode: soft, ultra-translucent cyber-glass matrix
             baseUnfilledFillAlpha = 4;
             baseUnfilledBorderAlpha = 18;
             emptyFillBrush = new SolidColorBrush(Color.FromArgb(baseUnfilledFillAlpha, 255, 255, 255));
@@ -302,6 +303,26 @@ public class BlockProgressBackground : Control
             fillBaseAlpha = 28;
             borderBaseAlpha = 68;
         }
+
+        // Check if we have active thread segments
+        List<DownloadSegment>? segmentList = null;
+        if (Segments != null)
+        {
+            segmentList = Segments.OfType<DownloadSegment>().ToList();
+            if (segmentList.Count < 2) segmentList = null;
+        }
+
+        long totalFileBytes = 0;
+        if (segmentList != null)
+        {
+            totalFileBytes = segmentList.Max(s => s.EndByte) + 1;
+            if (totalFileBytes <= 0) segmentList = null;
+        }
+
+        double pct = Math.Clamp(_animatedProgress, 0.0, 100.0);
+        double exactFilledSequential = (pct / 100.0) * totalCells;
+        int filledCountSequential = (int)Math.Floor(exactFilledSequential);
+        double fractionalCellSequential = exactFilledSequential - filledCountSequential;
 
         int cellIndex = 0;
         for (int r = 0; r < rows; r++)
@@ -318,7 +339,6 @@ public class BlockProgressBackground : Control
 
                 if (IsIndeterminate)
                 {
-                    // Live stream indeterminate wave animation in assigned palette colors
                     double wave = Math.Sin(_animPhase - (c * 0.16));
                     double waveFactor = Math.Clamp(0.5 + (wave * 0.5), 0.0, 1.0);
 
@@ -331,33 +351,88 @@ public class BlockProgressBackground : Control
                     context.DrawRectangle(waveFill, wavePen, rrect);
                     context.DrawLine(glassHighlightPen, new Point(x + radius, y + 0.8), new Point(x + cellW - radius, y + 0.8));
                 }
-                else if (cellIndex < filledCount)
+                else if (segmentList != null)
                 {
-                    // Fully filled cell with liquid gradient
+                    // ================= THREAD-RELATIVE CHUNK FILLING =================
+                    long cellStartByte = (long)((double)cellIndex / totalCells * totalFileBytes);
+                    long cellEndByte = (long)((double)(cellIndex + 1) / totalCells * totalFileBytes) - 1;
+
+                    var ownerSeg = segmentList.FirstOrDefault(s => cellStartByte >= s.StartByte && cellStartByte <= s.EndByte);
+                    if (ownerSeg == null && segmentList.Count > 0)
+                    {
+                        ownerSeg = segmentList.Last();
+                    }
+
+                    if (ownerSeg != null)
+                    {
+                        long segCurrentOffset = ownerSeg.CurrentOffset;
+
+                        if (segCurrentOffset >= cellEndByte || ownerSeg.IsCompleted)
+                        {
+                            // Cell is fully handled by this thread
+                            var fillBrush = new SolidColorBrush(Color.FromArgb(fillBaseAlpha, baseColor.R, baseColor.G, baseColor.B));
+                            var borderPen = new Pen(new SolidColorBrush(Color.FromArgb(borderBaseAlpha, baseColor.R, baseColor.G, baseColor.B)), 0.9);
+
+                            context.DrawRectangle(fillBrush, borderPen, rrect);
+                            context.DrawLine(glassHighlightPen, new Point(x + radius, y + 0.8), new Point(x + cellW - radius, y + 0.8));
+                        }
+                        else if (segCurrentOffset >= cellStartByte)
+                        {
+                            // Cell is the active write head of this thread
+                            double cellSpan = Math.Max(1.0, cellEndByte - cellStartByte + 1);
+                            double frac = Math.Clamp((double)(segCurrentOffset - cellStartByte) / cellSpan, 0.0, 1.0);
+
+                            // Active head pulse glow
+                            double pulse = Math.Sin(_animPhase * 2.0);
+                            byte pulseBonus = (byte)(Math.Max(0, pulse) * 20);
+
+                            byte fillAlpha = (byte)Math.Clamp(fillBaseAlpha * frac + pulseBonus, baseUnfilledFillAlpha, (byte)255);
+                            byte borderAlpha = (byte)Math.Clamp(borderBaseAlpha + pulseBonus * 2, baseUnfilledBorderAlpha, (byte)255);
+
+                            var fillBrush = new SolidColorBrush(Color.FromArgb(fillAlpha, baseColor.R, baseColor.G, baseColor.B));
+                            var borderPen = new Pen(new SolidColorBrush(Color.FromArgb(borderAlpha, baseColor.R, baseColor.G, baseColor.B)), 1.1);
+
+                            context.DrawRectangle(fillBrush, borderPen, rrect);
+                            context.DrawLine(glassHighlightPen, new Point(x + radius, y + 0.8), new Point(x + cellW - radius, y + 0.8));
+                        }
+                        else
+                        {
+                            // Unfilled cell waiting for this thread
+                            context.DrawRectangle(emptyFillBrush, emptyBorderPen, rrect);
+                            context.DrawLine(glassHighlightPen, new Point(x + radius, y + 0.8), new Point(x + cellW - radius, y + 0.8));
+                        }
+                    }
+                    else
+                    {
+                        context.DrawRectangle(emptyFillBrush, emptyBorderPen, rrect);
+                    }
+                }
+                else if (cellIndex < filledCountSequential)
+                {
+                    // Sequential mode: Fully filled
                     var fillBrush = new SolidColorBrush(Color.FromArgb(fillBaseAlpha, baseColor.R, baseColor.G, baseColor.B));
                     var borderPen = new Pen(new SolidColorBrush(Color.FromArgb(borderBaseAlpha, baseColor.R, baseColor.G, baseColor.B)), 0.9);
 
                     context.DrawRectangle(fillBrush, borderPen, rrect);
                     context.DrawLine(glassHighlightPen, new Point(x + radius, y + 0.8), new Point(x + cellW - radius, y + 0.8));
                 }
-                else if (cellIndex == filledCount && fractionalCell > 0.01)
+                else if (cellIndex == filledCountSequential && fractionalCellSequential > 0.01)
                 {
-                    // Silky liquid leading cell transition
-                    byte fillAlpha = (byte)Math.Clamp(fillBaseAlpha * fractionalCell, baseUnfilledFillAlpha, fillBaseAlpha);
-                    byte borderAlpha = (byte)Math.Clamp(baseUnfilledBorderAlpha + ((borderBaseAlpha - baseUnfilledBorderAlpha) * fractionalCell), baseUnfilledBorderAlpha, borderBaseAlpha);
+                    // Sequential mode: Leading cell
+                    byte fillAlpha = (byte)Math.Clamp(fillBaseAlpha * fractionalCellSequential, baseUnfilledFillAlpha, fillBaseAlpha);
+                    byte borderAlpha = (byte)Math.Clamp(baseUnfilledBorderAlpha + ((borderBaseAlpha - baseUnfilledBorderAlpha) * fractionalCellSequential), baseUnfilledBorderAlpha, borderBaseAlpha);
 
                     var fillBrush = new SolidColorBrush(Color.FromArgb(fillAlpha, baseColor.R, baseColor.G, baseColor.B));
                     var borderPen = new Pen(new SolidColorBrush(Color.FromArgb(borderAlpha, baseColor.R, baseColor.G, baseColor.B)), 0.9);
 
                     context.DrawRectangle(fillBrush, borderPen, rrect);
-                    context.DrawLine(glassHighlightPen, new Point(x + radius, y + 0.8), new Point(x + (cellW * fractionalCell) - radius, y + 0.8));
+                    context.DrawLine(glassHighlightPen, new Point(x + radius, y + 0.8), new Point(x + (cellW * fractionalCellSequential) - radius, y + 0.8));
                 }
                 else
                 {
-                    // Unfilled cell
+                    // Sequential mode: Unfilled
                     if (IsConnecting)
                     {
-                        // Faster, ultra-light and transparent gentle wave across unfilled cells during connecting mode
                         double wave = Math.Sin(_animPhase - (c * 0.14));
                         double waveFactor = Math.Clamp(0.5 + (wave * 0.5), 0.0, 1.0);
 
@@ -371,7 +446,6 @@ public class BlockProgressBackground : Control
                     }
                     else
                     {
-                        // Clean, soft translucent unfilled cell
                         context.DrawRectangle(emptyFillBrush, emptyBorderPen, rrect);
                         context.DrawLine(glassHighlightPen, new Point(x + radius, y + 0.8), new Point(x + cellW - radius, y + 0.8));
                     }
@@ -382,9 +456,6 @@ public class BlockProgressBackground : Control
         }
     }
 
-    /// <summary>
-    /// Evaluates smooth horizontal 3-stop liquid gradient with cosine ease blending
-    /// </summary>
     private static Color GetPaletteGradientColor((Color Stop0, Color Stop1, Color Stop2) pal, double t)
     {
         t = Math.Clamp(t, 0.0, 1.0);
@@ -409,4 +480,3 @@ public class BlockProgressBackground : Control
         }
     }
 }
-

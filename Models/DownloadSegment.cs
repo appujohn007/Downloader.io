@@ -27,6 +27,7 @@ public partial class DownloadSegment : ObservableObject
     private bool _isCompleted;
 
     public long TotalBytes => (EndByte >= StartByte) ? (EndByte - StartByte + 1) : -1;
+    public long CurrentOffset => StartByte + DownloadedBytes;
 
     public double ProgressPercentage
     {
@@ -38,21 +39,31 @@ public partial class DownloadSegment : ObservableObject
         }
     }
 
-    public string FormattedRange => $"{DownloadItem.FormatBytes(StartByte)} - {DownloadItem.FormatBytes(EndByte)}";
+    public string FormattedStartPoint => DownloadItem.FormatBytes(StartByte);
+    public string FormattedEndPoint => DownloadItem.FormatBytes(EndByte);
+    public string FormattedCurrentOffset => DownloadItem.FormatBytes(CurrentOffset);
+    public string FormattedDownloaded => DownloadItem.FormatBytes(DownloadedBytes);
+    public string FormattedSegmentSize => DownloadItem.FormatBytes(TotalBytes);
+    public string FormattedRange => $"{FormattedStartPoint} → {FormattedEndPoint}";
 
     public string FormattedProgress => TotalBytes > 0 
-        ? $"{DownloadItem.FormatBytes(DownloadedBytes)} / {DownloadItem.FormatBytes(TotalBytes)} ({ProgressPercentage:0.#}%)"
-        : $"{DownloadItem.FormatBytes(DownloadedBytes)}";
+        ? $"{FormattedDownloaded} / {FormattedSegmentSize} ({ProgressPercentage:0.#}%)"
+        : $"{FormattedDownloaded}";
 
     public string FormattedSpeed => SpeedBytesPerSec > 0 ? $"{DownloadItem.FormatBytes((long)SpeedBytesPerSec)}/s" : "-";
+
+    public string StatusText => IsCompleted ? "Finished" : (IsActive ? "Downloading" : "Connecting");
 
     public void UpdateMetrics(long downloaded, double speed)
     {
         DownloadedBytes = downloaded;
         SpeedBytesPerSec = speed;
+        OnPropertyChanged(nameof(CurrentOffset));
         OnPropertyChanged(nameof(ProgressPercentage));
         OnPropertyChanged(nameof(FormattedProgress));
         OnPropertyChanged(nameof(FormattedSpeed));
+        OnPropertyChanged(nameof(FormattedCurrentOffset));
+        OnPropertyChanged(nameof(FormattedDownloaded));
+        OnPropertyChanged(nameof(StatusText));
     }
 }
-

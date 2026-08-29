@@ -250,7 +250,7 @@
                                             Padding="14,10"
                                             ClipToBounds="True">
                                         <Grid>
-                                            <!-- Live Reactive Block Progress Grid Background (Frosted Glass Matrix) -->
+                                            <!-- Live Reactive Block Progress Grid Background with Thread-Relative Matrix Positioning -->
                                             <controls:BlockProgressBackground
                                                 Progress="{Binding ProgressPercentage}"
                                                 IsActive="{Binding IsActive}"
@@ -258,6 +258,7 @@
                                                 IsIndeterminate="{Binding IsIndeterminate}"
                                                 IsCompleted="{Binding IsCompleted}"
                                                 PaletteIndex="{Binding PaletteIndex}"
+                                                Segments="{Binding Segments}"
                                                 HorizontalAlignment="Stretch"
                                                 VerticalAlignment="Stretch"
                                                 Margin="-14,-10"
@@ -271,8 +272,8 @@
                                                         <Ellipse Width="6" Height="6" Fill="{DynamicResource AccentBrush}" VerticalAlignment="Center" IsVisible="{Binding IsActive}" Classes="pulse-dot" />
                                                         <TextBlock Text="{Binding FileName}" FontWeight="Medium" FontSize="13" Foreground="{DynamicResource TextPrimaryBrush}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
                                                         <!-- Thread Badge -->
-                                                        <Border IsVisible="{Binding Segments.Count}" Background="{DynamicResource AccentSubtleBrush}" CornerRadius="4" Padding="4,1" Margin="4,0,0,0">
-                                                            <TextBlock Text="{Binding Segments.Count, StringFormat='{}{0}T'}" FontSize="9" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" />
+                                                        <Border IsVisible="{Binding Segments.Count}" Background="{DynamicResource AccentSubtleBrush}" CornerRadius="4" Padding="5,1" Margin="4,0,0,0">
+                                                            <TextBlock Text="{Binding Segments.Count, StringFormat='{}{0} Threads'}" FontSize="9" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" />
                                                         </Border>
                                                     </StackPanel>
                                                     <TextBlock Grid.Column="1" Text="{Binding FormattedSize}" MinWidth="110" TextAlignment="Right" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center" Margin="8,0,0,0" />
@@ -333,7 +334,7 @@
                                                         <!-- Inspector / Details Button -->
                                                         <Button Classes="ghost-btn"
                                                                 Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).OpenInspectorCommand}"
-                                                                CommandParameter="{Binding}" ToolTip.Tip="Inspect / Segment Map / Checksum">
+                                                                CommandParameter="{Binding}" ToolTip.Tip="Inspect Threads &amp; Details">
                                                             <PathIcon Width="10" Height="10" Foreground="{DynamicResource TextSecondaryBrush}" Data="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" />
                                                         </Button>
 
@@ -406,16 +407,16 @@
                     BorderBrush="{DynamicResource BorderBrushCustom}"
                     BorderThickness="1"
                     CornerRadius="10"
-                    Width="600"
-                    MaxHeight="540"
+                    Width="640"
+                    MaxHeight="580"
                     HorizontalAlignment="Center"
                     VerticalAlignment="Center"
-                    Padding="20">
+                    Padding="22">
                 <Grid RowDefinitions="Auto, Auto, *, Auto">
                     <!-- Header -->
                     <Grid Grid.Row="0" ColumnDefinitions="*, Auto" Margin="0,0,0,12">
                         <StackPanel Grid.Column="0" Spacing="2">
-                            <TextBlock Text="Download Inspector" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" />
+                            <TextBlock Text="Download Inspector &amp; Thread Map" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" />
                             <TextBlock Text="{Binding InspectedItem.FileName}" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" TextTrimming="CharacterEllipsis" />
                         </StackPanel>
                         <Button Grid.Column="1" Classes="ghost-btn" Command="{Binding CloseInspectorCommand}" Padding="4">
@@ -426,7 +427,7 @@
                     <!-- Tab Switcher -->
                     <Grid Grid.Row="1" ColumnDefinitions="*, *, *" Margin="0,0,0,14">
                         <Button Grid.Column="0" Classes="subtle-btn" Command="{Binding SelectInspectorTabCommand}" CommandParameter="0" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Margin="0,0,3,0">
-                            <TextBlock Text="Threads Map" FontSize="11" />
+                            <TextBlock Text="Threads Matrix" FontSize="11" />
                         </Button>
                         <Button Grid.Column="1" Classes="subtle-btn" Command="{Binding SelectInspectorTabCommand}" CommandParameter="1" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Margin="3,0,3,0">
                             <TextBlock Text="Checksum Verifier" FontSize="11" />
@@ -438,27 +439,79 @@
 
                     <!-- Content Tab Area -->
                     <Grid Grid.Row="2">
-                        <!-- Tab 0: Segments / Thread visualizer -->
-                        <ScrollViewer VerticalScrollBarVisibility="Auto" MaxHeight="320" IsVisible="{Binding IsTab0}">
-                            <StackPanel Spacing="8">
-                                <TextBlock Text="{Binding InspectedItem.Segments.Count, StringFormat='{}Active Range Threads ({0})'}" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource TextMutedBrush}" />
+                        <!-- Tab 0: Detailed Thread Visualizer & Position Info -->
+                        <ScrollViewer VerticalScrollBarVisibility="Auto" MaxHeight="360" IsVisible="{Binding IsTab0}">
+                            <StackPanel Spacing="10">
+                                <!-- Concurrency Summary Card -->
+                                <Border Background="{DynamicResource ChipBgBrush}" CornerRadius="6" Padding="12,8">
+                                    <Grid ColumnDefinitions="*, *, *">
+                                        <StackPanel Grid.Column="0" Spacing="2">
+                                            <TextBlock Text="CONCURRENCY" FontSize="9" FontWeight="Bold" Foreground="{DynamicResource TextMutedBrush}" />
+                                            <TextBlock Text="{Binding InspectedItem.Segments.Count, StringFormat='{}{0} Parallel Threads'}" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" />
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="1" Spacing="2">
+                                            <TextBlock Text="TOTAL RANGE" FontSize="9" FontWeight="Bold" Foreground="{DynamicResource TextMutedBrush}" />
+                                            <TextBlock Text="{Binding InspectedItem.FormattedSize}" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" />
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="2" Spacing="2">
+                                            <TextBlock Text="OVERALL SPEED" FontSize="9" FontWeight="Bold" Foreground="{DynamicResource TextMutedBrush}" />
+                                            <TextBlock Text="{Binding InspectedItem.FormattedSpeed}" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}" />
+                                        </StackPanel>
+                                    </Grid>
+                                </Border>
+
+                                <!-- Individual Thread Cards -->
                                 <ItemsControl ItemsSource="{Binding InspectedItem.Segments}">
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate DataType="models:DownloadSegment">
-                                            <Border Background="{DynamicResource ChipBgBrush}" CornerRadius="6" Padding="10,8" Margin="0,0,0,6">
-                                                <Grid RowDefinitions="Auto, Auto">
-                                                    <Grid Grid.Row="0" ColumnDefinitions="Auto, *, Auto" Margin="0,0,0,4">
-                                                        <TextBlock Grid.Column="0" Text="{Binding SegmentId, StringFormat='{}Thread #{0}'}" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}" />
-                                                        <TextBlock Grid.Column="1" Text="{Binding FormattedProgress}" FontSize="10" Foreground="{DynamicResource TextSecondaryBrush}" HorizontalAlignment="Center" />
-                                                        <TextBlock Grid.Column="2" Text="{Binding FormattedSpeed}" FontSize="10" Foreground="{DynamicResource TextMutedBrush}" />
+                                            <Border Background="{DynamicResource ChipBgBrush}"
+                                                    BorderBrush="{DynamicResource BorderBrushCustom}"
+                                                    BorderThickness="1"
+                                                    CornerRadius="8"
+                                                    Padding="12,10"
+                                                    Margin="0,0,0,8">
+                                                <Grid RowDefinitions="Auto, Auto, Auto">
+                                                    <!-- Row 0: Thread Header & Live State -->
+                                                    <Grid Grid.Row="0" ColumnDefinitions="Auto, *, Auto" Margin="0,0,0,6">
+                                                        <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                                            <Border Background="{DynamicResource AccentSubtleBrush}" CornerRadius="4" Padding="5,2">
+                                                                <TextBlock Text="{Binding SegmentId, StringFormat='{}THREAD #{0}'}" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" />
+                                                            </Border>
+                                                            <TextBlock Text="{Binding StatusText}" FontSize="10" Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center" />
+                                                        </StackPanel>
+
+                                                        <TextBlock Grid.Column="1" Text="{Binding FormattedProgress}" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+
+                                                        <TextBlock Grid.Column="2" Text="{Binding FormattedSpeed}" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" />
                                                     </Grid>
-                                                    <ProgressBar Grid.Row="1" Classes="thin-progress" Value="{Binding ProgressPercentage}" Minimum="0" Maximum="100" />
+
+                                                    <!-- Row 1: High-Tech Progress Bar -->
+                                                    <ProgressBar Grid.Row="1" Classes="thin-progress" Value="{Binding ProgressPercentage}" Minimum="0" Maximum="100" Margin="0,0,0,6" />
+
+                                                    <!-- Row 2: Detailed Start Point, Offset, and End Point -->
+                                                    <Grid Grid.Row="2" ColumnDefinitions="Auto, *, Auto">
+                                                        <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="3">
+                                                            <TextBlock Text="Start:" FontSize="10" Foreground="{DynamicResource TextMutedBrush}" />
+                                                            <TextBlock Text="{Binding FormattedStartPoint}" FontSize="10" FontWeight="Medium" Foreground="{DynamicResource TextSecondaryBrush}" />
+                                                        </StackPanel>
+
+                                                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="3" HorizontalAlignment="Center">
+                                                            <TextBlock Text="Offset:" FontSize="10" Foreground="{DynamicResource TextMutedBrush}" />
+                                                            <TextBlock Text="{Binding FormattedCurrentOffset}" FontSize="10" FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}" />
+                                                        </StackPanel>
+
+                                                        <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="3">
+                                                            <TextBlock Text="End:" FontSize="10" Foreground="{DynamicResource TextMutedBrush}" />
+                                                            <TextBlock Text="{Binding FormattedEndPoint}" FontSize="10" FontWeight="Medium" Foreground="{DynamicResource TextSecondaryBrush}" />
+                                                        </StackPanel>
+                                                    </Grid>
                                                 </Grid>
                                             </Border>
                                         </DataTemplate>
                                     </ItemsControl.ItemTemplate>
                                 </ItemsControl>
-                                <TextBlock Text="Single stream mode (no range segments active)" FontSize="11" Foreground="{DynamicResource TextMutedBrush}" IsVisible="{Binding !InspectedItem.Segments.Count}" Margin="0,10,0,0" HorizontalAlignment="Center" />
+
+                                <TextBlock Text="Single stream mode active (server did not supply range segments)" FontSize="11" Foreground="{DynamicResource TextMutedBrush}" IsVisible="{Binding !InspectedItem.Segments.Count}" Margin="0,10,0,0" HorizontalAlignment="Center" />
                             </StackPanel>
                         </ScrollViewer>
 
@@ -493,7 +546,7 @@
                         </StackPanel>
 
                         <!-- Tab 2: Headers & Info -->
-                        <ScrollViewer VerticalScrollBarVisibility="Auto" MaxHeight="320" IsVisible="{Binding IsTab2}">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto" MaxHeight="360" IsVisible="{Binding IsTab2}">
                             <StackPanel Spacing="8">
                                 <TextBlock Text="Source URL:" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource TextMutedBrush}" />
                                 <TextBox Classes="minimal-input" Text="{Binding InspectedItem.Url}" IsReadOnly="True" FontSize="10" TextWrapping="Wrap" />
