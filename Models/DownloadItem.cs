@@ -92,7 +92,19 @@ public partial class DownloadItem : ObservableObject
     public string PartialPath => $"{FullPath}.downloaderio";
 
     [JsonIgnore]
-    public string SegmentsMetaPath => $"{FullPath}.downloaderio.meta";
+    public string SegmentsMetaPath
+    {
+        get
+        {
+            var metaDir = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                "Downloader.io",
+                "metadata");
+
+            var safeKey = Convert.ToHexString(System.Security.Cryptography.MD5.HashData(System.Text.Encoding.UTF8.GetBytes(FullPath))).ToLowerInvariant();
+            return Path.Combine(metaDir, $"{safeKey}_{FileName}.meta");
+        }
+    }
 
     [JsonIgnore]
     public CancellationTokenSource? Cts { get; set; }
