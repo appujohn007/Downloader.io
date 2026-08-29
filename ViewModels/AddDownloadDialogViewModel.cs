@@ -81,7 +81,7 @@ public partial class AddDownloadDialogViewModel : ViewModelBase
         _downloadService = downloadService;
         _settingsService = settingsService ?? new SettingsService();
 
-        var settings = _settingsService.LoadSettings();
+        var settings = _settingsService.CurrentSettings;
         SaveDirectory = settings.DefaultDownloadDirectory;
         SelectedThreadCount = settings.DefaultThreadsPerDownload;
         AutoExtractZip = settings.IsAutoExtractZipEnabled;
@@ -162,7 +162,7 @@ public partial class AddDownloadDialogViewModel : ViewModelBase
 
     private void ApplySmartFolderRouting(string fileName)
     {
-        var settings = _settingsService.LoadSettings();
+        var settings = _settingsService.CurrentSettings;
         if (!settings.IsSmartFolderRoutingEnabled) return;
 
         var category = DownloadItem.DetermineCategory(fileName);

@@ -35,6 +35,10 @@ public partial class MiniDropWindow : Window
     private void CloseMini_Click(object? sender, RoutedEventArgs e)
     {
         Hide();
+        if (DataContext is MainViewModel vm)
+        {
+            vm.IsMiniWidgetVisible = false;
+        }
     }
 
     private void OnDragOver(object? sender, DragEventArgs e)

@@ -150,6 +150,7 @@ public partial class MainViewModel : ViewModelBase
 
     private readonly DispatcherTimer _statsTimer;
     private readonly DispatcherTimer _scheduleTimer;
+    private readonly DispatcherTimer _notificationTimer;
     private bool _hasExecutedPowerAction = false;
 
     public MainViewModel(
@@ -211,6 +212,17 @@ public partial class MainViewModel : ViewModelBase
         };
         _scheduleTimer.Tick += (s, e) => CheckScheduledDownloads();
         _scheduleTimer.Start();
+
+        // Notification dismiss timer
+        _notificationTimer = new DispatcherTimer
+        {
+            Interval = TimeSpan.FromSeconds(3)
+        };
+        _notificationTimer.Tick += (s, e) =>
+        {
+            HasNotification = false;
+            _notificationTimer.Stop();
+        };
 
         ApplyFilter();
     }
@@ -773,12 +785,7 @@ public partial class MainViewModel : ViewModelBase
         QuickNotification = message;
         HasNotification = true;
 
-        var timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(3) };
-        timer.Tick += (s, e) =>
-        {
-            HasNotification = false;
-            timer.Stop();
-        };
-        timer.Start();
+        _notificationTimer.Stop();
+        _notificationTimer.Start();
     }
 }

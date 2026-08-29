@@ -31,9 +31,9 @@ public partial class MainWindow : Window
     {
         base.OnPointerPressed(e);
 
-        // Allow dragging window from top 34px bar
+        // Allow dragging window from top 38px titlebar
         var point = e.GetCurrentPoint(this);
-        if (point.Position.Y <= 34 && e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
+        if (point.Position.Y <= 38 && e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
         {
             BeginMoveDrag(e);
         }
