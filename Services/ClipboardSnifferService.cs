@@ -20,6 +20,7 @@ public class ClipboardSnifferService : IClipboardSnifferService
     private readonly ISettingsService _settingsService;
     private readonly DispatcherTimer _timer;
     private string _lastSeenClipboard = string.Empty;
+    private bool _isFirstTick = true;
 
     private static readonly string[] DownloadableExtensions = new[]
     {
@@ -62,25 +63,9 @@ public class ClipboardSnifferService : IClipboardSnifferService
     {
         if (!_timer.IsEnabled)
         {
-            // Seed current clipboard content so existing stale links do not trigger popup on startup
-            Task.Run(async () =>
-            {
-                try
-                {
-                    var initialText = await _clipboardService.GetTextAsync();
-                    if (!string.IsNullOrWhiteSpace(initialText))
-                    {
-                        _lastSeenClipboard = initialText;
-                    }
-                }
-                catch
-                {
-                    // Ignore initial access error
-                }
-            });
-
+            _isFirstTick = true;
             _timer.Start();
-            Logger.Debug("[SNIFFER] Clipboard sniffer active (ignoring pre-existing clipboard content).");
+            Logger.Debug("[SNIFFER] Clipboard sniffer active (startup auto-popup suppressed).");
         }
     }
 
@@ -100,7 +85,17 @@ public class ClipboardSnifferService : IClipboardSnifferService
         try
         {
             var text = await _clipboardService.GetTextAsync();
-            if (string.IsNullOrWhiteSpace(text) || text == _lastSeenClipboard) return;
+            if (string.IsNullOrWhiteSpace(text)) return;
+
+            // On the very first tick after app startup/window creation, seed existing clipboard and NEVER pop up
+            if (_isFirstTick)
+            {
+                _isFirstTick = false;
+                _lastSeenClipboard = text;
+                return;
+            }
+
+            if (text == _lastSeenClipboard) return;
 
             _lastSeenClipboard = text;
 
@@ -118,7 +113,7 @@ public class ClipboardSnifferService : IClipboardSnifferService
 
                 if (isDownloadable)
                 {
-                    Logger.Info($"[SNIFFER] Detected downloadable URL in clipboard: {trimmed}");
+                    Logger.Info($"[SNIFFER] Detected new downloadable URL copied to clipboard: {trimmed}");
                     DownloadableUrlDetected?.Invoke(trimmed);
                 }
             }

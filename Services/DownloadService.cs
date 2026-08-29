@@ -642,15 +642,16 @@ public class DownloadService : IDownloadService
 
     private static void SaveSegmentsMeta(DownloadItem item, List<DownloadSegment> segments)
     {
+        // Segments are now automatically persisted cleanly in %AppData%/Downloader.io/downloads.json
+        // Clean up any legacy .meta files in download directory
         try
         {
-            var json = JsonSerializer.Serialize(segments);
-            File.WriteAllText(item.SegmentsMetaPath, json);
+            if (File.Exists(item.SegmentsMetaPath))
+            {
+                File.Delete(item.SegmentsMetaPath);
+            }
         }
-        catch
-        {
-            // Ignore temporary write errors during cancellation
-        }
+        catch {}
     }
 
     private async Task ProcessSingleStreamDownloadAsync(
