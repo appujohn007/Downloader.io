@@ -50,31 +50,6 @@ public class BlockProgressBackground : Control
     private double _animPhase = 0.0;
     private readonly DispatcherTimer _animTimer;
 
-    // 10 distinct, vibrant gradient palettes
-    private static readonly (Color Stop0, Color Stop1, Color Stop2)[] Palettes = new[]
-    {
-        // 0: Cyber Cyan -> Vivid Blue -> Purple
-        (Color.FromRgb(0, 210, 255), Color.FromRgb(59, 130, 246), Color.FromRgb(147, 51, 234)),
-        // 1: Neon Emerald -> Teal -> Electric Mint
-        (Color.FromRgb(16, 185, 129), Color.FromRgb(20, 184, 166), Color.FromRgb(52, 211, 153)),
-        // 2: Sunset Amber -> Fire Orange -> Crimson Rose
-        (Color.FromRgb(245, 158, 11), Color.FromRgb(249, 115, 22), Color.FromRgb(244, 63, 94)),
-        // 3: Ultraviolet -> Magenta -> Neon Pink
-        (Color.FromRgb(139, 92, 246), Color.FromRgb(217, 70, 239), Color.FromRgb(244, 114, 182)),
-        // 4: Electric Lime -> Mint -> Seafoam
-        (Color.FromRgb(132, 204, 22), Color.FromRgb(16, 185, 129), Color.FromRgb(6, 182, 212)),
-        // 5: Sapphire Blue -> Azure Sky -> Iris
-        (Color.FromRgb(37, 99, 235), Color.FromRgb(56, 189, 248), Color.FromRgb(129, 140, 248)),
-        // 6: Crimson Flame -> Coral -> Golden Sun
-        (Color.FromRgb(239, 68, 68), Color.FromRgb(251, 146, 60), Color.FromRgb(250, 204, 21)),
-        // 7: Aurora Aqua -> Turquoise -> Deep Ocean
-        (Color.FromRgb(45, 212, 191), Color.FromRgb(14, 165, 233), Color.FromRgb(99, 102, 241)),
-        // 8: Cyber Fuchsia -> Purple -> Midnight Blue
-        (Color.FromRgb(236, 72, 153), Color.FromRgb(168, 85, 247), Color.FromRgb(59, 130, 246)),
-        // 9: Peach Blossom -> Rose -> Violet
-        (Color.FromRgb(251, 113, 133), Color.FromRgb(244, 63, 94), Color.FromRgb(192, 132, 252)),
-    };
-
     static BlockProgressBackground()
     {
         AffectsRender<BlockProgressBackground>(
@@ -178,62 +153,53 @@ public class BlockProgressBackground : Control
                 _animatedProgress = Math.Clamp(Progress, 0.0, 100.0);
                 _isInitialized = true;
             }
-            EnsureAnimationRunning();
+            EnsureTimerRunning();
         }
-        else if (change.Property == IsActiveProperty || change.Property == IsConnectingProperty || change.Property == IsIndeterminateProperty || change.Property == SegmentsProperty)
+        else if (change.Property == IsActiveProperty ||
+                 change.Property == IsConnectingProperty ||
+                 change.Property == IsIndeterminateProperty ||
+                 change.Property == SegmentsProperty)
         {
-            EnsureAnimationRunning();
+            EnsureTimerRunning();
         }
     }
 
-    protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
+    private void EnsureTimerRunning()
     {
-        base.OnAttachedToVisualTree(e);
-        if (!_isInitialized)
+        if (IsActive || IsConnecting || IsIndeterminate || Math.Abs(_animatedProgress - Progress) > 0.05)
         {
-            _animatedProgress = Math.Clamp(Progress, 0.0, 100.0);
-            _isInitialized = true;
-        }
-        EnsureAnimationRunning();
-    }
-
-    protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
-    {
-        base.OnDetachedFromVisualTree(e);
-        _animTimer.Stop();
-    }
-
-    private void EnsureAnimationRunning()
-    {
-        if (!_animTimer.IsEnabled)
-        {
-            _animTimer.Start();
+            if (!_animTimer.IsEnabled)
+            {
+                _animTimer.Start();
+            }
         }
     }
 
     private void OnAnimationTick(object? sender, EventArgs e)
     {
         bool needsRedraw = false;
-
         double target = Math.Clamp(Progress, 0.0, 100.0);
-        double diff = target - _animatedProgress;
 
-        if (Math.Abs(diff) > 0.01)
+        if (Math.Abs(_animatedProgress - target) > 0.01)
         {
-            double step = diff * 0.14;
-            if (Math.Abs(step) < 0.004) step = Math.Sign(diff) * 0.004;
+            double diff = target - _animatedProgress;
+            double step = diff * 0.12;
+            if (Math.Abs(step) < 0.05)
+            {
+                step = Math.Sign(diff) * Math.Min(Math.Abs(diff), 0.05);
+            }
             _animatedProgress += step;
             needsRedraw = true;
         }
-        else if (_animatedProgress != target)
+        else
         {
             _animatedProgress = target;
-            needsRedraw = true;
         }
 
-        if (IsConnecting || IsIndeterminate || (IsActive && Segments != null))
+        if (IsActive || IsConnecting || IsIndeterminate)
         {
-            _animPhase = (_animPhase + 0.07) % (Math.PI * 2.0);
+            _animPhase += 0.06;
+            if (_animPhase > Math.PI * 2000.0) _animPhase -= Math.PI * 2000.0;
             needsRedraw = true;
         }
 
@@ -270,8 +236,7 @@ public class BlockProgressBackground : Control
 
         int totalCells = cols * rows;
 
-        int palIdx = Math.Abs(PaletteIndex) % Palettes.Length;
-        var currentPalette = Palettes[palIdx];
+        var currentPalette = GetHarmonicPalette(PaletteIndex);
 
         bool isLight = ActualThemeVariant == Avalonia.Styling.ThemeVariant.Light;
 
@@ -382,15 +347,15 @@ public class BlockProgressBackground : Control
                             double cellSpan = Math.Max(1.0, cellEndByte - cellStartByte + 1);
                             double frac = Math.Clamp((double)(segCurrentOffset - cellStartByte) / cellSpan, 0.0, 1.0);
 
-                            // Active head pulse glow
+                            // Active head pulse glow with luminous harmonic highlight
                             double pulse = Math.Sin(_animPhase * 2.0);
-                            byte pulseBonus = (byte)(Math.Max(0, pulse) * 20);
+                            byte pulseBonus = (byte)(Math.Max(0, pulse) * 22);
 
                             byte fillAlpha = (byte)Math.Clamp(fillBaseAlpha * frac + pulseBonus, baseUnfilledFillAlpha, (byte)255);
                             byte borderAlpha = (byte)Math.Clamp(borderBaseAlpha + pulseBonus * 2, baseUnfilledBorderAlpha, (byte)255);
 
-                            var fillBrush = new SolidColorBrush(Color.FromArgb(fillAlpha, baseColor.R, baseColor.G, baseColor.B));
-                            var borderPen = new Pen(new SolidColorBrush(Color.FromArgb(borderAlpha, baseColor.R, baseColor.G, baseColor.B)), 1.1);
+                            var fillBrush = new SolidColorBrush(Color.FromArgb(fillAlpha, currentPalette.Highlight.R, currentPalette.Highlight.G, currentPalette.Highlight.B));
+                            var borderPen = new Pen(new SolidColorBrush(Color.FromArgb(borderAlpha, currentPalette.Highlight.R, currentPalette.Highlight.G, currentPalette.Highlight.B)), 1.15);
 
                             context.DrawRectangle(fillBrush, borderPen, rrect);
                             context.DrawLine(glassHighlightPen, new Point(x + radius, y + 0.8), new Point(x + cellW - radius, y + 0.8));
@@ -418,25 +383,33 @@ public class BlockProgressBackground : Control
                 }
                 else if (cellIndex == filledCountSequential && fractionalCellSequential > 0.01)
                 {
-                    // Sequential mode: Leading cell
-                    byte fillAlpha = (byte)Math.Clamp(fillBaseAlpha * fractionalCellSequential, baseUnfilledFillAlpha, fillBaseAlpha);
-                    byte borderAlpha = (byte)Math.Clamp(baseUnfilledBorderAlpha + ((borderBaseAlpha - baseUnfilledBorderAlpha) * fractionalCellSequential), baseUnfilledBorderAlpha, borderBaseAlpha);
+                    // Sequential mode: Partially filled active head
+                    byte fracFillAlpha = (byte)Math.Clamp(fillBaseAlpha * fractionalCellSequential, baseUnfilledFillAlpha, (byte)255);
+                    byte fracBorderAlpha = (byte)Math.Clamp(borderBaseAlpha * fractionalCellSequential, baseUnfilledBorderAlpha, (byte)255);
 
-                    var fillBrush = new SolidColorBrush(Color.FromArgb(fillAlpha, baseColor.R, baseColor.G, baseColor.B));
-                    var borderPen = new Pen(new SolidColorBrush(Color.FromArgb(borderAlpha, baseColor.R, baseColor.G, baseColor.B)), 0.9);
+                    if (IsActive || IsConnecting)
+                    {
+                        double pulse = Math.Sin(_animPhase * 2.0);
+                        byte pulseBonus = (byte)(Math.Max(0, pulse) * 16);
+                        fracFillAlpha = (byte)Math.Clamp(fracFillAlpha + pulseBonus, (byte)0, (byte)255);
+                        fracBorderAlpha = (byte)Math.Clamp(fracBorderAlpha + pulseBonus, (byte)0, (byte)255);
+                    }
+
+                    var fillBrush = new SolidColorBrush(Color.FromArgb(fracFillAlpha, currentPalette.Highlight.R, currentPalette.Highlight.G, currentPalette.Highlight.B));
+                    var borderPen = new Pen(new SolidColorBrush(Color.FromArgb(fracBorderAlpha, currentPalette.Highlight.R, currentPalette.Highlight.G, currentPalette.Highlight.B)), 1.1);
 
                     context.DrawRectangle(fillBrush, borderPen, rrect);
-                    context.DrawLine(glassHighlightPen, new Point(x + radius, y + 0.8), new Point(x + (cellW * fractionalCellSequential) - radius, y + 0.8));
+                    context.DrawLine(glassHighlightPen, new Point(x + radius, y + 0.8), new Point(x + cellW - radius, y + 0.8));
                 }
                 else
                 {
-                    // Sequential mode: Unfilled
+                    // Empty cell
                     if (IsConnecting)
                     {
-                        double wave = Math.Sin(_animPhase - (c * 0.14));
+                        double wave = Math.Sin(_animPhase - (c * 0.12));
                         double waveFactor = Math.Clamp(0.5 + (wave * 0.5), 0.0, 1.0);
 
-                        byte waveFillAlpha = (byte)(baseUnfilledFillAlpha + (waveFactor * 7));
+                        byte waveFillAlpha = (byte)(baseUnfilledFillAlpha + (waveFactor * 10));
                         byte waveBorderAlpha = (byte)(baseUnfilledBorderAlpha + (waveFactor * 22));
 
                         var waveFill = new SolidColorBrush(Color.FromArgb(waveFillAlpha, baseColor.R, baseColor.G, baseColor.B));
@@ -456,7 +429,74 @@ public class BlockProgressBackground : Control
         }
     }
 
-    private static Color GetPaletteGradientColor((Color Stop0, Color Stop1, Color Stop2) pal, double t)
+    /// <summary>
+    /// Procedurally generates infinite, mathematically harmonious 3-color gradient combos with glowing highlight.
+    /// Uses golden ratio hue dispersion and aesthetic color harmony archetypes.
+    /// </summary>
+    public static (Color Stop0, Color Stop1, Color Stop2, Color Highlight) GetHarmonicPalette(int seed)
+    {
+        uint uSeed = (uint)seed ^ 0x9E3779B9u;
+        double baseHue = (uSeed * 137.50776405) % 360.0;
+        int schemeType = (int)(uSeed % 5);
+
+        double hue1, hue2;
+        switch (schemeType)
+        {
+            case 0: // Golden Analogous Drift (Smooth Aurora)
+                hue1 = (baseHue + 32.0 + (uSeed % 12)) % 360.0;
+                hue2 = (hue1 + 38.0 + ((uSeed >> 4) % 15)) % 360.0;
+                break;
+            case 1: // Split-Complementary Electric (Neon Glow)
+                hue1 = (baseHue + 55.0) % 360.0;
+                hue2 = (baseHue + 140.0 + (uSeed % 20)) % 360.0;
+                break;
+            case 2: // Triadic Luminescence (Balanced Rich Spectrum)
+                hue1 = (baseHue + 45.0 + (uSeed % 10)) % 360.0;
+                hue2 = (baseHue + 95.0 + (uSeed % 15)) % 360.0;
+                break;
+            case 3: // High-Contrast Neon Flow (Cyan/Lime/Magenta)
+                hue1 = (baseHue + 50.0) % 360.0;
+                hue2 = (baseHue + 115.0) % 360.0;
+                break;
+            default: // Jewel Twilight
+                hue1 = (baseHue + 28.0) % 360.0;
+                hue2 = (baseHue + 72.0) % 360.0;
+                break;
+        }
+
+        var stop0 = HslToRgb(baseHue, 0.94, 0.54);
+        var stop1 = HslToRgb(hue1, 0.92, 0.50);
+        var stop2 = HslToRgb(hue2, 0.95, 0.48);
+        var highlight = HslToRgb(baseHue, 0.98, 0.76);
+
+        return (stop0, stop1, stop2, highlight);
+    }
+
+    private static Color HslToRgb(double h, double s, double l)
+    {
+        h = (h % 360.0 + 360.0) % 360.0;
+        s = Math.Clamp(s, 0.0, 1.0);
+        l = Math.Clamp(l, 0.0, 1.0);
+
+        double c = (1.0 - Math.Abs(2.0 * l - 1.0)) * s;
+        double x = c * (1.0 - Math.Abs((h / 60.0) % 2.0 - 1.0));
+        double m = l - c / 2.0;
+
+        double r = 0, g = 0, b = 0;
+        if (h < 60) { r = c; g = x; b = 0; }
+        else if (h < 120) { r = x; g = c; b = 0; }
+        else if (h < 180) { r = 0; g = c; b = x; }
+        else if (h < 240) { r = 0; g = x; b = c; }
+        else if (h < 300) { r = x; g = 0; b = c; }
+        else { r = c; g = 0; b = x; }
+
+        return Color.FromRgb(
+            (byte)Math.Round((r + m) * 255.0),
+            (byte)Math.Round((g + m) * 255.0),
+            (byte)Math.Round((b + m) * 255.0));
+    }
+
+    private static Color GetPaletteGradientColor((Color Stop0, Color Stop1, Color Stop2, Color Highlight) pal, double t)
     {
         t = Math.Clamp(t, 0.0, 1.0);
 
