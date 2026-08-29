@@ -57,8 +57,20 @@ public partial class DownloadItem : ObservableObject
         get
         {
             if (TotalBytes <= 0)
-                return FormatBytes(DownloadedBytes);
+                return $"{FormatBytes(DownloadedBytes)} / ?";
             return $"{FormatBytes(DownloadedBytes)} / {FormatBytes(TotalBytes)}";
+        }
+    }
+
+    public string FormattedPercentageText
+    {
+        get
+        {
+            if (Status == DownloadStatus.Downloading && TotalBytes <= 0)
+                return "Stream";
+            if (Status == DownloadStatus.Connecting)
+                return "0%";
+            return $"{ProgressPercentage:0.#}%";
         }
     }
 
@@ -102,7 +114,7 @@ public partial class DownloadItem : ObservableObject
     {
         DownloadStatus.Queued => "Queued",
         DownloadStatus.Connecting => "Connecting...",
-        DownloadStatus.Downloading => "Downloading",
+        DownloadStatus.Downloading => TotalBytes <= 0 ? "Streaming..." : "Downloading",
         DownloadStatus.Paused => "Paused",
         DownloadStatus.Completed => "Completed",
         DownloadStatus.Failed => "Failed",
@@ -112,6 +124,7 @@ public partial class DownloadItem : ObservableObject
 
     public bool IsActive => Status == DownloadStatus.Downloading || Status == DownloadStatus.Connecting;
     public bool IsConnecting => Status == DownloadStatus.Connecting;
+    public bool IsIndeterminate => TotalBytes <= 0 && Status == DownloadStatus.Downloading;
     public bool CanPause => Status == DownloadStatus.Downloading || Status == DownloadStatus.Connecting;
     public bool CanResume => Status == DownloadStatus.Paused || Status == DownloadStatus.Failed;
     public bool IsCompleted => Status == DownloadStatus.Completed;
@@ -123,6 +136,8 @@ public partial class DownloadItem : ObservableObject
         ProgressPercentage = progressPct;
         
         OnPropertyChanged(nameof(FormattedSize));
+        OnPropertyChanged(nameof(FormattedPercentageText));
+        OnPropertyChanged(nameof(IsIndeterminate));
 
         if (updateSpeedDisplay)
         {
@@ -135,11 +150,13 @@ public partial class DownloadItem : ObservableObject
     public void NotifyProgressChanged()
     {
         OnPropertyChanged(nameof(FormattedSize));
+        OnPropertyChanged(nameof(FormattedPercentageText));
         OnPropertyChanged(nameof(FormattedSpeed));
         OnPropertyChanged(nameof(FormattedEta));
         OnPropertyChanged(nameof(StatusDisplayText));
         OnPropertyChanged(nameof(IsActive));
         OnPropertyChanged(nameof(IsConnecting));
+        OnPropertyChanged(nameof(IsIndeterminate));
         OnPropertyChanged(nameof(CanPause));
         OnPropertyChanged(nameof(CanResume));
         OnPropertyChanged(nameof(IsCompleted));

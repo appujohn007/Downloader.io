@@ -206,11 +206,12 @@
                                             Padding="14,10"
                                             ClipToBounds="True">
                                         <Grid>
-                                            <!-- Dynamic Matrix Block Tile Progress Grid Background with Glassmorphic Horizontal Gradient -->
+                                            <!-- Live Reactive Block Progress Grid Background (Frosted Glass Matrix) -->
                                             <controls:BlockProgressBackground
                                                 Progress="{Binding ProgressPercentage}"
                                                 IsActive="{Binding IsActive}"
                                                 IsConnecting="{Binding IsConnecting}"
+                                                IsIndeterminate="{Binding IsIndeterminate}"
                                                 IsCompleted="{Binding IsCompleted}"
                                                 PaletteIndex="{Binding PaletteIndex}"
                                                 HorizontalAlignment="Stretch"
@@ -233,6 +234,7 @@
                                                 <!-- Middle Row: Minimal Progress Bar -->
                                                 <ProgressBar Grid.Row="1"
                                                              Classes="thin-progress"
+                                                             IsIndeterminate="{Binding IsIndeterminate}"
                                                              Value="{Binding ProgressPercentage}"
                                                              Minimum="0"
                                                              Maximum="100"
@@ -243,7 +245,7 @@
                                                     <!-- Metadata Line with Stable Fixed Boundaries -->
                                                     <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
                                                         <!-- Progress Percentage (Fixed Slot) -->
-                                                        <TextBlock Text="{Binding ProgressPercentage, StringFormat='{}{0:0.#}%'}"
+                                                        <TextBlock Text="{Binding FormattedPercentageText}"
                                                                    Width="44"
                                                                    FontSize="11"
                                                                    FontWeight="SemiBold"

@@ -17,6 +17,9 @@ public class BlockProgressBackground : Control
     public static readonly StyledProperty<bool> IsConnectingProperty =
         AvaloniaProperty.Register<BlockProgressBackground, bool>(nameof(IsConnecting), false);
 
+    public static readonly StyledProperty<bool> IsIndeterminateProperty =
+        AvaloniaProperty.Register<BlockProgressBackground, bool>(nameof(IsIndeterminate), false);
+
     public static readonly StyledProperty<bool> IsCompletedProperty =
         AvaloniaProperty.Register<BlockProgressBackground, bool>(nameof(IsCompleted), false);
 
@@ -72,6 +75,7 @@ public class BlockProgressBackground : Control
             ProgressProperty,
             IsActiveProperty,
             IsConnectingProperty,
+            IsIndeterminateProperty,
             IsCompletedProperty,
             PaletteIndexProperty,
             CellSizeProperty,
@@ -105,6 +109,12 @@ public class BlockProgressBackground : Control
     {
         get => GetValue(IsConnectingProperty);
         set => SetValue(IsConnectingProperty, value);
+    }
+
+    public bool IsIndeterminate
+    {
+        get => GetValue(IsIndeterminateProperty);
+        set => SetValue(IsIndeterminateProperty, value);
     }
 
     public bool IsCompleted
@@ -156,7 +166,7 @@ public class BlockProgressBackground : Control
             }
             EnsureAnimationRunning();
         }
-        else if (change.Property == IsActiveProperty || change.Property == IsConnectingProperty)
+        else if (change.Property == IsActiveProperty || change.Property == IsConnectingProperty || change.Property == IsIndeterminateProperty)
         {
             EnsureAnimationRunning();
         }
@@ -206,10 +216,10 @@ public class BlockProgressBackground : Control
             needsRedraw = true;
         }
 
-        // Connecting wave animation phase (faster, fluid speed)
-        if (IsConnecting)
+        // Connecting wave or indeterminate live stream animation phase
+        if (IsConnecting || IsIndeterminate)
         {
-            _animPhase = (_animPhase + 0.12) % (Math.PI * 2.0);
+            _animPhase = (_animPhase + 0.11) % (Math.PI * 2.0);
             needsRedraw = true;
         }
 
@@ -217,7 +227,7 @@ public class BlockProgressBackground : Control
         {
             InvalidateVisual();
         }
-        else if (!IsConnecting && Math.Abs(_animatedProgress - target) <= 0.05)
+        else if (!IsConnecting && !IsIndeterminate && Math.Abs(_animatedProgress - target) <= 0.05)
         {
             _animTimer.Stop();
         }
@@ -304,7 +314,22 @@ public class BlockProgressBackground : Control
                 double horizontalRatio = (x + cellW * 0.5) / bounds.Width;
                 var baseColor = GetPaletteGradientColor(currentPalette, horizontalRatio);
 
-                if (cellIndex < filledCount)
+                if (IsIndeterminate)
+                {
+                    // Live stream indeterminate wave animation in assigned palette colors
+                    double wave = Math.Sin(_animPhase - (c * 0.16));
+                    double waveFactor = Math.Clamp(0.5 + (wave * 0.5), 0.0, 1.0);
+
+                    byte waveFillAlpha = (byte)(baseUnfilledFillAlpha + (waveFactor * 22));
+                    byte waveBorderAlpha = (byte)(baseUnfilledBorderAlpha + (waveFactor * 52));
+
+                    var waveFill = new SolidColorBrush(Color.FromArgb(waveFillAlpha, baseColor.R, baseColor.G, baseColor.B));
+                    var wavePen = new Pen(new SolidColorBrush(Color.FromArgb(waveBorderAlpha, baseColor.R, baseColor.G, baseColor.B)), 0.9);
+
+                    context.DrawRectangle(waveFill, wavePen, rrect);
+                    context.DrawLine(glassHighlightPen, new Point(x + radius, y + 0.8), new Point(x + cellW - radius, y + 0.8));
+                }
+                else if (cellIndex < filledCount)
                 {
                     // Fully filled cell
                     var fillBrush = new SolidColorBrush(Color.FromArgb(fillBaseAlpha, baseColor.R, baseColor.G, baseColor.B));
