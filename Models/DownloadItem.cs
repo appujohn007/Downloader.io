@@ -1,4 +1,5 @@
 using System;
+using System.Collections.ObjectModel;
 using System.IO;
 using System.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -44,6 +45,44 @@ public partial class DownloadItem : ObservableObject
 
     [ObservableProperty]
     private DateTime? _completedAt;
+
+    [ObservableProperty]
+    private int _maxSegments = 8;
+
+    [ObservableProperty]
+    private long _speedCapBytesPerSec = 0; // 0 = unlimited
+
+    [ObservableProperty]
+    private string? _checksumMd5;
+
+    [ObservableProperty]
+    private string? _checksumSha256;
+
+    [ObservableProperty]
+    private bool _isCalculatingHash;
+
+    [ObservableProperty]
+    private string? _expectedChecksum;
+
+    [ObservableProperty]
+    private bool? _isChecksumMatched;
+
+    [ObservableProperty]
+    private bool _autoExtractZip;
+
+    [ObservableProperty]
+    private DateTime? _scheduledStartTime;
+
+    [ObservableProperty]
+    private bool _isScheduled;
+
+    [ObservableProperty]
+    private string _serverHeadersSummary = string.Empty;
+
+    [ObservableProperty]
+    private int _retryAttempts = 0;
+
+    public ObservableCollection<DownloadSegment> Segments { get; } = new();
 
     public string FullPath => Path.Combine(SaveDirectory, FileName);
     public string PartialPath => $"{FullPath}.downloaderio";
@@ -112,9 +151,9 @@ public partial class DownloadItem : ObservableObject
 
     public string StatusDisplayText => Status switch
     {
-        DownloadStatus.Queued => "Queued",
-        DownloadStatus.Connecting => "Connecting...",
-        DownloadStatus.Downloading => TotalBytes <= 0 ? "Streaming..." : "Downloading",
+        DownloadStatus.Queued => IsScheduled ? $"Scheduled for {ScheduledStartTime:HH:mm}" : "Queued",
+        DownloadStatus.Connecting => RetryAttempts > 0 ? $"Reconnecting (Try {RetryAttempts})..." : "Connecting...",
+        DownloadStatus.Downloading => TotalBytes <= 0 ? "Streaming..." : (Segments.Count > 1 ? $"Accelerated ({Segments.Count} threads)" : "Downloading"),
         DownloadStatus.Paused => "Paused",
         DownloadStatus.Completed => "Completed",
         DownloadStatus.Failed => "Failed",
@@ -126,7 +165,7 @@ public partial class DownloadItem : ObservableObject
     public bool IsConnecting => Status == DownloadStatus.Connecting;
     public bool IsIndeterminate => TotalBytes <= 0 && Status == DownloadStatus.Downloading;
     public bool CanPause => Status == DownloadStatus.Downloading || Status == DownloadStatus.Connecting;
-    public bool CanResume => Status == DownloadStatus.Paused || Status == DownloadStatus.Failed;
+    public bool CanResume => Status == DownloadStatus.Paused || Status == DownloadStatus.Failed || (Status == DownloadStatus.Queued && IsScheduled);
     public bool IsCompleted => Status == DownloadStatus.Completed;
 
     public void UpdateProgressMetrics(long downloaded, long total, double progressPct, double smoothedSpeed, bool updateSpeedDisplay)
@@ -144,6 +183,7 @@ public partial class DownloadItem : ObservableObject
             SpeedBytesPerSec = smoothedSpeed;
             OnPropertyChanged(nameof(FormattedSpeed));
             OnPropertyChanged(nameof(FormattedEta));
+            OnPropertyChanged(nameof(StatusDisplayText));
         }
     }
 
@@ -176,7 +216,7 @@ public partial class DownloadItem : ObservableObject
         return $"{len:0.##} {sizes[order]}";
     }
 
-    private static DownloadCategory DetermineCategory(string fileName)
+    public static DownloadCategory DetermineCategory(string fileName)
     {
         var ext = Path.GetExtension(fileName).ToLowerInvariant();
         return ext switch

@@ -1,0 +1,52 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:DownloaderApp.ViewModels"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="240" d:DesignHeight="70"
+        Width="240" Height="70"
+        x:Class="DownloaderApp.Views.MiniDropWindow"
+        x:DataType="vm:MainViewModel"
+        Background="Transparent"
+        TransparencyLevelHint="Transparent"
+        Topmost="True"
+        CanResize="False"
+        SystemDecorations="None"
+        ExtendClientAreaToDecorationsHint="True"
+        ExtendClientAreaChromeHints="NoChrome"
+        DragDrop.AllowDrop="True"
+        Title="Downloader.io Mini">
+
+    <Border Background="{DynamicResource CardBgBrush}"
+            BorderBrush="{DynamicResource AccentBrush}"
+            BorderThickness="1.2"
+            CornerRadius="12"
+            Padding="12,10"
+            BoxShadow="0 8 24 0 #44000000">
+        <Grid ColumnDefinitions="Auto, *, Auto">
+            <!-- Pulse Icon -->
+            <Ellipse Grid.Column="0" Width="10" Height="10" Fill="{DynamicResource AccentBrush}" Classes="pulse-dot" VerticalAlignment="Center" Margin="0,0,10,0" />
+
+            <!-- Stats & Drop Prompt -->
+            <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                    <TextBlock Text="{Binding TotalDownloadSpeedFormatted}" FontWeight="SemiBold" FontSize="12" Foreground="{DynamicResource AccentBrush}" />
+                    <TextBlock Text="•" FontSize="10" Foreground="{DynamicResource TextMutedBrush}" VerticalAlignment="Center" />
+                    <TextBlock Text="{Binding TotalActiveCount, StringFormat='{}{0} active'}" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center" />
+                </StackPanel>
+                <TextBlock Text="Drop links here to download" FontSize="10" Foreground="{DynamicResource TextMutedBrush}" />
+            </StackPanel>
+
+            <!-- Actions -->
+            <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                <Button Classes="ghost-btn" Click="RestoreMain_Click" ToolTip.Tip="Open Full Window" Padding="4">
+                    <PathIcon Width="10" Height="10" Foreground="{DynamicResource TextSecondaryBrush}" Data="M19 19H5V5h7V3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z" />
+                </Button>
+                <Button Classes="ghost-btn" Click="CloseMini_Click" ToolTip.Tip="Close Mini Drop" Padding="4">
+                    <PathIcon Width="10" Height="10" Foreground="{DynamicResource TextSecondaryBrush}" Data="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
+                </Button>
+            </StackPanel>
+        </Grid>
+    </Border>
+</Window>
+

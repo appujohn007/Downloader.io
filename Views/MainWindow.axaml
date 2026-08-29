@@ -5,12 +5,13 @@
         xmlns:controls="using:DownloaderApp.Controls"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        mc:Ignorable="d" d:DesignWidth="1050" d:DesignHeight="680"
-        Width="1050" Height="680"
-        MinWidth="820" MinHeight="520"
+        mc:Ignorable="d" d:DesignWidth="1100" d:DesignHeight="720"
+        Width="1100" Height="720"
+        MinWidth="860" MinHeight="540"
         x:Class="DownloaderApp.Views.MainWindow"
         x:DataType="vm:MainViewModel"
         Background="{DynamicResource AppBgBrush}"
+        TransparencyLevelHint="Mica,AcrylicBlur,Transparent"
         WindowStartupLocation="CenterScreen"
         ExtendClientAreaToDecorationsHint="True"
         ExtendClientAreaChromeHints="NoChrome"
@@ -21,7 +22,7 @@
         <vm:MainViewModel />
     </Design.DataContext>
 
-    <Grid RowDefinitions="34, *" Background="{DynamicResource AppBgBrush}">
+    <Grid RowDefinitions="38, *" Background="{DynamicResource AppBgBrush}">
         <!-- ================= TOP WINDOWS CAPTION & TITLE BAR ================= -->
         <Border Grid.Row="0"
                 Background="{DynamicResource SidebarBgBrush}"
@@ -34,46 +35,72 @@
                     <TextBlock Text="downloader.io" FontWeight="SemiBold" FontSize="12" Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center" />
                 </StackPanel>
 
-                <!-- Center Live Stats (when downloading) -->
-                <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="6"
-                            IsVisible="{Binding TotalActiveCount}">
-                    <Ellipse Width="6" Height="6" Fill="{DynamicResource AccentBrush}" VerticalAlignment="Center" Classes="pulse-dot" Margin="0,0,4,0" />
-                    <TextBlock Text="{Binding TotalDownloadSpeedFormatted, StringFormat='{}↓ {0}'}" 
-                               MinWidth="76"
-                               FontSize="11" 
-                               FontWeight="SemiBold" 
-                               Foreground="{DynamicResource AccentBrush}" 
-                               VerticalAlignment="Center" />
-                    <TextBlock Text="•" FontSize="10" Foreground="{DynamicResource TextMutedBrush}" Margin="2,0" VerticalAlignment="Center" />
-                    <TextBlock Text="{Binding TotalActiveCount, StringFormat='{}{0} active'}" 
-                               MinWidth="52"
-                               FontSize="11" 
-                               Foreground="{DynamicResource TextSecondaryBrush}" 
-                               VerticalAlignment="Center" />
-                </StackPanel>
+                <!-- Center Real-time Rolling Speed Waveform Chart -->
+                <Grid Grid.Column="1" Margin="24,3,24,3" VerticalAlignment="Stretch">
+                    <controls:SpeedWaveformControl CurrentSpeed="{Binding CurrentAggregateSpeed}"
+                                                   IsDarkMode="{Binding IsDarkMode}"
+                                                   HorizontalAlignment="Stretch"
+                                                   VerticalAlignment="Stretch"
+                                                   Opacity="0.85" />
+                    <!-- Center Speed Readout Overlay -->
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="6"
+                                IsVisible="{Binding TotalActiveCount}">
+                        <Ellipse Width="6" Height="6" Fill="{DynamicResource AccentBrush}" VerticalAlignment="Center" Classes="pulse-dot" Margin="0,0,4,0" />
+                        <TextBlock Text="{Binding TotalDownloadSpeedFormatted, StringFormat='{}↓ {0}'}" 
+                                   FontSize="11" 
+                                   FontWeight="SemiBold" 
+                                   Foreground="{DynamicResource AccentBrush}" 
+                                   VerticalAlignment="Center" />
+                        <TextBlock Text="•" FontSize="10" Foreground="{DynamicResource TextMutedBrush}" Margin="2,0" VerticalAlignment="Center" />
+                        <TextBlock Text="{Binding TotalActiveCount, StringFormat='{}{0} active'}" 
+                                   FontSize="11" 
+                                   Foreground="{DynamicResource TextSecondaryBrush}" 
+                                   VerticalAlignment="Center" />
+                    </StackPanel>
+                </Grid>
 
-                <!-- Theme Switcher Button -->
-                <Button Grid.Column="2" Classes="ghost-btn" Command="{Binding ToggleThemeCommand}" Padding="8,4" Margin="0,0,8,0" VerticalAlignment="Center" ToolTip.Tip="Toggle Theme">
-                    <StackPanel Orientation="Horizontal" Spacing="5">
+                <!-- Speed Limiter & Tools Toolbar -->
+                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center" Margin="0,0,8,0">
+                    <!-- Speed Limiter Selector -->
+                    <ComboBox SelectedIndex="{Binding SelectedSpeedCapIndex}"
+                              FontSize="11"
+                              Padding="6,3"
+                              MaxHeight="26"
+                              ToolTip.Tip="Bandwidth Throttling / Speed Limiter"
+                              Background="{DynamicResource CardBgBrush}"
+                              BorderBrush="{DynamicResource BorderBrushCustom}">
+                        <ComboBoxItem Content="⚡ Unlimited" />
+                        <ComboBoxItem Content="🐢 10 MB/s" />
+                        <ComboBoxItem Content="🐢 5 MB/s" />
+                        <ComboBoxItem Content="🐢 2 MB/s" />
+                        <ComboBoxItem Content="🐢 500 KB/s" />
+                    </ComboBox>
+
+                    <!-- Floating Mini Widget Button -->
+                    <Button Classes="ghost-btn" Command="{Binding ToggleMiniWidgetCommand}" ToolTip.Tip="Toggle Floating Drop Zone">
+                        <PathIcon Width="11" Height="11" Foreground="{DynamicResource TextSecondaryBrush}" Data="M19 19H5V5h7V3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z" />
+                    </Button>
+
+                    <!-- Settings Button -->
+                    <Button Classes="ghost-btn" Command="{Binding ToggleSettingsCommand}" ToolTip.Tip="Settings">
+                        <PathIcon Width="11" Height="11" Foreground="{DynamicResource TextSecondaryBrush}" Data="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z" />
+                    </Button>
+
+                    <!-- Theme Switcher Button -->
+                    <Button Classes="ghost-btn" Command="{Binding ToggleThemeCommand}" Padding="6,4" ToolTip.Tip="Toggle Theme">
                         <PathIcon Width="11" Height="11" Foreground="{DynamicResource TextSecondaryBrush}"
                                   Data="M12 3a9 9 0 1 0 9 9c0-.46-.04-.92-.1-1.36a5.389 5.389 0 0 1-4.4 2.26 5.403 5.403 0 0 1-3.14-9.8c-.44-.06-.9-.1-1.36-.1z" />
-                        <TextBlock Text="{Binding ThemeModeTitle}" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center" />
-                    </StackPanel>
-                </Button>
+                    </Button>
+                </StackPanel>
 
                 <!-- Native Windows Caption Controls (Minimize, Maximize, Close) -->
                 <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Stretch">
-                    <!-- Minimize Button -->
                     <Button Classes="caption-btn" Click="MinimizeWindow_Click" ToolTip.Tip="Minimize">
                         <Rectangle Width="10" Height="1.2" Fill="{Binding $parent[Button].Foreground}" HorizontalAlignment="Center" VerticalAlignment="Center" />
                     </Button>
-
-                    <!-- Maximize / Restore Button -->
                     <Button Classes="caption-btn" Click="MaximizeWindow_Click" ToolTip.Tip="Maximize">
                         <Border Width="10" Height="10" BorderBrush="{Binding $parent[Button].Foreground}" BorderThickness="1.2" Background="Transparent" HorizontalAlignment="Center" VerticalAlignment="Center" />
                     </Button>
-
-                    <!-- Close Button -->
                     <Button Classes="caption-close-btn" Click="CloseWindow_Click" ToolTip.Tip="Close">
                         <Path Data="M 0,0 L 10,10 M 10,0 L 0,10"
                               Stroke="{Binding $parent[Button].Foreground}"
@@ -148,10 +175,27 @@
                                 <TextBlock Grid.Column="0" Text="Errors" VerticalAlignment="Center" />
                             </Grid>
                         </Button>
+
+                        <TextBlock Text="CATEGORIES" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource TextMutedBrush}" Margin="8,16,0,6" />
+
+                        <Button Classes="nav-link" Command="{Binding SelectCategoryCommand}" CommandParameter="Compressed">
+                            <TextBlock Text="📦 Archives / Zip" FontSize="11" />
+                        </Button>
+                        <Button Classes="nav-link" Command="{Binding SelectCategoryCommand}" CommandParameter="Programs">
+                            <TextBlock Text="💻 Software / Executables" FontSize="11" />
+                        </Button>
+                        <Button Classes="nav-link" Command="{Binding SelectCategoryCommand}" CommandParameter="Media">
+                            <TextBlock Text="🎬 Videos &amp; Music" FontSize="11" />
+                        </Button>
+                        <Button Classes="nav-link" Command="{Binding SelectCategoryCommand}" CommandParameter="Documents">
+                            <TextBlock Text="📄 Documents" FontSize="11" />
+                        </Button>
                     </StackPanel>
 
                     <!-- Bottom Status Text -->
-                    <TextBlock Grid.Row="2" Text="Ctrl+V to paste link" FontSize="10" Foreground="{DynamicResource TextMutedBrush}" HorizontalAlignment="Center" Margin="0,8,0,0" />
+                    <StackPanel Grid.Row="2" Spacing="4">
+                        <TextBlock Text="Ctrl+V to paste link" FontSize="10" Foreground="{DynamicResource TextMutedBrush}" HorizontalAlignment="Center" />
+                    </StackPanel>
                 </Grid>
             </Border>
 
@@ -168,7 +212,7 @@
                         <TextBox Grid.Column="0"
                                  Classes="minimal-input"
                                  Text="{Binding SearchQuery}"
-                                 Watermark="Search files..."
+                                 Watermark="Search downloads..."
                                  MaxWidth="320"
                                  HorizontalAlignment="Left" />
 
@@ -224,9 +268,12 @@
                                                 <!-- Top Row: File Name & Size -->
                                                 <Grid Grid.Row="0" ColumnDefinitions="*, Auto" Margin="0,0,0,6">
                                                     <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                                                        <!-- Live pulse when active -->
                                                         <Ellipse Width="6" Height="6" Fill="{DynamicResource AccentBrush}" VerticalAlignment="Center" IsVisible="{Binding IsActive}" Classes="pulse-dot" />
                                                         <TextBlock Text="{Binding FileName}" FontWeight="Medium" FontSize="13" Foreground="{DynamicResource TextPrimaryBrush}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                                        <!-- Thread Badge -->
+                                                        <Border IsVisible="{Binding Segments.Count}" Background="{DynamicResource AccentSubtleBrush}" CornerRadius="4" Padding="4,1" Margin="4,0,0,0">
+                                                            <TextBlock Text="{Binding Segments.Count, StringFormat='{}{0}T'}" FontSize="9" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" />
+                                                        </Border>
                                                     </StackPanel>
                                                     <TextBlock Grid.Column="1" Text="{Binding FormattedSize}" MinWidth="110" TextAlignment="Right" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center" Margin="8,0,0,0" />
                                                 </Grid>
@@ -244,7 +291,7 @@
                                                 <Grid Grid.Row="2" ColumnDefinitions="*, Auto">
                                                     <!-- Metadata Line with Stable Fixed Boundaries -->
                                                     <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
-                                                        <!-- Progress Percentage (Fixed Slot) -->
+                                                        <!-- Progress Percentage -->
                                                         <TextBlock Text="{Binding FormattedPercentageText}"
                                                                    Width="44"
                                                                    FontSize="11"
@@ -252,15 +299,15 @@
                                                                    Foreground="{DynamicResource AccentBrush}"
                                                                    VerticalAlignment="Center" />
 
-                                                        <!-- Status (Fixed Slot) -->
+                                                        <!-- Status -->
                                                         <TextBlock Text="•" FontSize="10" Foreground="{DynamicResource TextMutedBrush}" Margin="6,0" VerticalAlignment="Center" />
                                                         <TextBlock Text="{Binding StatusDisplayText}"
-                                                                   MinWidth="76"
+                                                                   MinWidth="80"
                                                                    FontSize="11"
                                                                    Foreground="{DynamicResource TextSecondaryBrush}"
                                                                    VerticalAlignment="Center" />
 
-                                                        <!-- Live Speed (Fixed Slot) -->
+                                                        <!-- Live Speed -->
                                                         <StackPanel Orientation="Horizontal" IsVisible="{Binding FormattedSpeed, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
                                                             <TextBlock Text="•" FontSize="10" Foreground="{DynamicResource TextMutedBrush}" Margin="6,0" VerticalAlignment="Center" />
                                                             <TextBlock Text="{Binding FormattedSpeed}"
@@ -270,7 +317,7 @@
                                                                        VerticalAlignment="Center" />
                                                         </StackPanel>
 
-                                                        <!-- ETA (Fixed Slot) -->
+                                                        <!-- ETA -->
                                                         <StackPanel Orientation="Horizontal" IsVisible="{Binding FormattedEta, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
                                                             <TextBlock Text="•" FontSize="10" Foreground="{DynamicResource TextMutedBrush}" Margin="6,0" VerticalAlignment="Center" />
                                                             <TextBlock Text="{Binding FormattedEta}"
@@ -279,20 +326,17 @@
                                                                        Foreground="{DynamicResource TextSecondaryBrush}"
                                                                        VerticalAlignment="Center" />
                                                         </StackPanel>
-
-                                                        <!-- Error msg -->
-                                                        <StackPanel Orientation="Horizontal" IsVisible="{Binding ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
-                                                            <TextBlock Text="•" FontSize="10" Foreground="{DynamicResource TextMutedBrush}" Margin="6,0" VerticalAlignment="Center" />
-                                                            <TextBlock Text="{Binding ErrorMessage}"
-                                                                       FontSize="11"
-                                                                       Foreground="#EF4444"
-                                                                       VerticalAlignment="Center"
-                                                                       TextTrimming="CharacterEllipsis" />
-                                                        </StackPanel>
                                                     </StackPanel>
 
                                                     <!-- Action Buttons -->
                                                     <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="2">
+                                                        <!-- Inspector / Details Button -->
+                                                        <Button Classes="ghost-btn"
+                                                                Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).OpenInspectorCommand}"
+                                                                CommandParameter="{Binding}" ToolTip.Tip="Inspect / Segment Map / Checksum">
+                                                            <PathIcon Width="10" Height="10" Foreground="{DynamicResource TextSecondaryBrush}" Data="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" />
+                                                        </Button>
+
                                                         <!-- Pause -->
                                                         <Button Classes="ghost-btn" IsVisible="{Binding CanPause}"
                                                                 Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).PauseDownloadCommand}"
@@ -344,7 +388,7 @@
                         </ItemsControl>
                     </ScrollViewer>
 
-                    <!-- Minimal Clean Empty State -->
+                    <!-- Empty State -->
                     <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="10"
                                 IsVisible="{Binding !DisplayedDownloads.Count}">
                         <TextBlock Text="No active downloads" FontSize="13" FontWeight="Medium" Foreground="{DynamicResource TextPrimaryBrush}" HorizontalAlignment="Center" />
@@ -353,6 +397,189 @@
                 </Grid>
             </Grid>
         </Grid>
+
+        <!-- ================= INSPECTOR DRAWER ================= -->
+        <Border Grid.Row="0" Grid.RowSpan="2"
+                IsVisible="{Binding IsInspectorOpen}"
+                Background="{DynamicResource ModalOverlayBrush}">
+            <Border Background="{DynamicResource CardBgBrush}"
+                    BorderBrush="{DynamicResource BorderBrushCustom}"
+                    BorderThickness="1"
+                    CornerRadius="10"
+                    Width="600"
+                    MaxHeight="540"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    Padding="20">
+                <Grid RowDefinitions="Auto, Auto, *, Auto">
+                    <!-- Header -->
+                    <Grid Grid.Row="0" ColumnDefinitions="*, Auto" Margin="0,0,0,12">
+                        <StackPanel Grid.Column="0" Spacing="2">
+                            <TextBlock Text="Download Inspector" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" />
+                            <TextBlock Text="{Binding InspectedItem.FileName}" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" TextTrimming="CharacterEllipsis" />
+                        </StackPanel>
+                        <Button Grid.Column="1" Classes="ghost-btn" Command="{Binding CloseInspectorCommand}" Padding="4">
+                            <PathIcon Width="10" Height="10" Foreground="{DynamicResource TextSecondaryBrush}" Data="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
+                        </Button>
+                    </Grid>
+
+                    <!-- Tab Switcher -->
+                    <Grid Grid.Row="1" ColumnDefinitions="*, *, *" Margin="0,0,0,14">
+                        <Button Grid.Column="0" Classes="subtle-btn" Command="{Binding SelectInspectorTabCommand}" CommandParameter="0" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Margin="0,0,3,0">
+                            <TextBlock Text="Threads Map" FontSize="11" />
+                        </Button>
+                        <Button Grid.Column="1" Classes="subtle-btn" Command="{Binding SelectInspectorTabCommand}" CommandParameter="1" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Margin="3,0,3,0">
+                            <TextBlock Text="Checksum Verifier" FontSize="11" />
+                        </Button>
+                        <Button Grid.Column="2" Classes="subtle-btn" Command="{Binding SelectInspectorTabCommand}" CommandParameter="2" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Margin="3,0,0,0">
+                            <TextBlock Text="Headers &amp; Info" FontSize="11" />
+                        </Button>
+                    </Grid>
+
+                    <!-- Content Tab Area -->
+                    <Grid Grid.Row="2">
+                        <!-- Tab 0: Segments / Thread visualizer -->
+                        <ScrollViewer VerticalScrollBarVisibility="Auto" MaxHeight="320" IsVisible="{Binding IsTab0}">
+                            <StackPanel Spacing="8">
+                                <TextBlock Text="{Binding InspectedItem.Segments.Count, StringFormat='{}Active Range Threads ({0})'}" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource TextMutedBrush}" />
+                                <ItemsControl ItemsSource="{Binding InspectedItem.Segments}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate DataType="models:DownloadSegment">
+                                            <Border Background="{DynamicResource ChipBgBrush}" CornerRadius="6" Padding="10,8" Margin="0,0,0,6">
+                                                <Grid RowDefinitions="Auto, Auto">
+                                                    <Grid Grid.Row="0" ColumnDefinitions="Auto, *, Auto" Margin="0,0,0,4">
+                                                        <TextBlock Grid.Column="0" Text="{Binding SegmentId, StringFormat='{}Thread #{0}'}" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}" />
+                                                        <TextBlock Grid.Column="1" Text="{Binding FormattedProgress}" FontSize="10" Foreground="{DynamicResource TextSecondaryBrush}" HorizontalAlignment="Center" />
+                                                        <TextBlock Grid.Column="2" Text="{Binding FormattedSpeed}" FontSize="10" Foreground="{DynamicResource TextMutedBrush}" />
+                                                    </Grid>
+                                                    <ProgressBar Grid.Row="1" Classes="thin-progress" Value="{Binding ProgressPercentage}" Minimum="0" Maximum="100" />
+                                                </Grid>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                                <TextBlock Text="Single stream mode (no range segments active)" FontSize="11" Foreground="{DynamicResource TextMutedBrush}" IsVisible="{Binding !InspectedItem.Segments.Count}" Margin="0,10,0,0" HorizontalAlignment="Center" />
+                            </StackPanel>
+                        </ScrollViewer>
+
+                        <!-- Tab 1: Checksum verification -->
+                        <StackPanel Spacing="10" IsVisible="{Binding IsTab1}">
+                            <TextBlock Text="Cryptographic Hash Verification" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource TextMutedBrush}" />
+                            <Grid ColumnDefinitions="Auto, *">
+                                <ComboBox Grid.Column="0" SelectedItem="{Binding ChecksumAlgorithm}" SelectedIndex="0" MaxHeight="30" FontSize="11" Margin="0,0,8,0">
+                                    <ComboBoxItem Content="SHA256" />
+                                    <ComboBoxItem Content="MD5" />
+                                </ComboBox>
+                                <Button Grid.Column="1" Classes="primary-btn" Command="{Binding ComputeChecksumCommand}" Content="Compute Hash" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
+                            </Grid>
+                            <StackPanel Spacing="4">
+                                <TextBlock Text="Calculated File Hash:" FontSize="10" Foreground="{DynamicResource TextSecondaryBrush}" />
+                                <TextBox Classes="minimal-input" Text="{Binding CalculatedChecksum}" IsReadOnly="True" FontSize="11" />
+                            </StackPanel>
+                            <StackPanel Spacing="4">
+                                <Grid ColumnDefinitions="*, Auto">
+                                    <TextBlock Grid.Column="0" Text="Compare against expected hash:" FontSize="10" Foreground="{DynamicResource TextSecondaryBrush}" />
+                                    <Button Grid.Column="1" Classes="ghost-btn" Command="{Binding PasteExpectedChecksumCommand}" Padding="4,0">
+                                        <TextBlock Text="Paste from clipboard" FontSize="10" Foreground="{DynamicResource AccentBrush}" />
+                                    </Button>
+                                </Grid>
+                                <TextBox Classes="minimal-input" Text="{Binding ExpectedChecksumInput}" Watermark="Paste MD5 / SHA-256 hash here..." FontSize="11" />
+                            </StackPanel>
+                            <!-- Match Indicator -->
+                            <Border IsVisible="{Binding ChecksumMatchStatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                                    Background="{DynamicResource ChipBgBrush}" CornerRadius="6" Padding="10,6">
+                                <TextBlock Text="{Binding ChecksumMatchStatusText}" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" />
+                            </Border>
+                        </StackPanel>
+
+                        <!-- Tab 2: Headers & Info -->
+                        <ScrollViewer VerticalScrollBarVisibility="Auto" MaxHeight="320" IsVisible="{Binding IsTab2}">
+                            <StackPanel Spacing="8">
+                                <TextBlock Text="Source URL:" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource TextMutedBrush}" />
+                                <TextBox Classes="minimal-input" Text="{Binding InspectedItem.Url}" IsReadOnly="True" FontSize="10" TextWrapping="Wrap" />
+
+                                <TextBlock Text="Destination Path:" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource TextMutedBrush}" Margin="0,4,0,0" />
+                                <TextBox Classes="minimal-input" Text="{Binding InspectedItem.FullPath}" IsReadOnly="True" FontSize="10" TextWrapping="Wrap" />
+
+                                <TextBlock Text="Server Info:" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource TextMutedBrush}" Margin="0,4,0,0" />
+                                <TextBox Classes="minimal-input" Text="{Binding InspectedItem.ServerHeadersSummary}" IsReadOnly="True" FontSize="10" />
+
+                                <Grid ColumnDefinitions="*, *" Margin="0,4,0,0">
+                                    <StackPanel Grid.Column="0" Spacing="2">
+                                        <TextBlock Text="Created:" FontSize="10" Foreground="{DynamicResource TextMutedBrush}" />
+                                        <TextBlock Text="{Binding InspectedItem.CreatedAt, StringFormat='{}{0:yyyy-MM-dd HH:mm:ss}'}" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" />
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="1" Spacing="2">
+                                        <TextBlock Text="Completed:" FontSize="10" Foreground="{DynamicResource TextMutedBrush}" />
+                                        <TextBlock Text="{Binding InspectedItem.CompletedAt, StringFormat='{}{0:yyyy-MM-dd HH:mm:ss}'}" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" />
+                                    </StackPanel>
+                                </Grid>
+                            </StackPanel>
+                        </ScrollViewer>
+                    </Grid>
+
+                    <!-- Footer -->
+                    <Button Grid.Row="3" Classes="subtle-btn" Command="{Binding CloseInspectorCommand}" Content="Close Inspector" HorizontalAlignment="Right" Margin="0,12,0,0" />
+                </Grid>
+            </Border>
+        </Border>
+
+        <!-- ================= SETTINGS DRAWER ================= -->
+        <Border Grid.Row="0" Grid.RowSpan="2"
+                IsVisible="{Binding IsSettingsOpen}"
+                Background="{DynamicResource ModalOverlayBrush}">
+            <Border Background="{DynamicResource CardBgBrush}"
+                    BorderBrush="{DynamicResource BorderBrushCustom}"
+                    BorderThickness="1"
+                    CornerRadius="10"
+                    Width="520"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    Padding="22">
+                <StackPanel Spacing="14">
+                    <Grid ColumnDefinitions="*, Auto">
+                        <TextBlock Grid.Column="0" Text="Settings &amp; Preferences" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center" />
+                        <Button Grid.Column="1" Classes="ghost-btn" Command="{Binding ToggleSettingsCommand}" Padding="4">
+                            <PathIcon Width="10" Height="10" Foreground="{DynamicResource TextSecondaryBrush}" Data="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
+                        </Button>
+                    </Grid>
+
+                    <!-- Default Folder -->
+                    <StackPanel Spacing="4">
+                        <TextBlock Text="Default Download Directory:" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" />
+                        <Grid ColumnDefinitions="*, Auto">
+                            <TextBox Grid.Column="0" Classes="minimal-input" Text="{Binding DefaultDownloadDirectory}" Margin="0,0,6,0" />
+                            <Button Grid.Column="1" Classes="subtle-btn" Command="{Binding BrowseDefaultDirectoryCommand}" Content="Browse..." Padding="10,6" />
+                        </Grid>
+                    </StackPanel>
+
+                    <!-- Options Grid -->
+                    <StackPanel Spacing="8">
+                        <CheckBox IsChecked="{Binding IsSmartFolderRoutingEnabled}" Content="Smart Folder Routing (Auto-sort Archives, Media, Software)" FontSize="11" />
+                        <CheckBox IsChecked="{Binding IsAutoExtractZipEnabled}" Content="Auto-Extract ZIP archives upon download completion" FontSize="11" />
+                        <CheckBox IsChecked="{Binding IsClipboardSnifferEnabled}" Content="Clipboard Sniffer (Prompt when downloadable links are copied)" FontSize="11" />
+                        <CheckBox IsChecked="{Binding IsSoundEnabled}" Content="Play subtle sound cues on download complete / error" FontSize="11" />
+                    </StackPanel>
+
+                    <!-- Power Actions -->
+                    <StackPanel Spacing="4">
+                        <TextBlock Text="Post-Download Power Management (When all downloads finish):" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" />
+                        <ComboBox SelectedItem="{Binding SelectedPostDownloadAction}" SelectedIndex="0" FontSize="11" HorizontalAlignment="Stretch">
+                            <ComboBoxItem Content="None (Stay On)" />
+                            <ComboBoxItem Content="Shut Down PC" />
+                            <ComboBoxItem Content="Sleep Mode" />
+                            <ComboBoxItem Content="Hibernate" />
+                        </ComboBox>
+                    </StackPanel>
+
+                    <!-- Save Actions -->
+                    <Grid ColumnDefinitions="*, Auto, Auto" Margin="0,6,0,0">
+                        <Button Grid.Column="1" Classes="ghost-btn" Command="{Binding ToggleSettingsCommand}" Content="Cancel" Margin="0,0,6,0" />
+                        <Button Grid.Column="2" Classes="primary-btn" Command="{Binding SaveSettingsCommand}" Content="Save Settings" />
+                    </Grid>
+                </StackPanel>
+            </Border>
+        </Border>
 
         <!-- ================= MINIMAL TOAST NOTIFICATION ================= -->
         <Border Grid.Row="1"
@@ -368,7 +595,7 @@
             <TextBlock Text="{Binding QuickNotification}" FontSize="12" Foreground="{DynamicResource TextPrimaryBrush}" />
         </Border>
 
-        <!-- ================= MINIMAL ADD DOWNLOAD MODAL ================= -->
+        <!-- ================= ADD DOWNLOAD MODAL ================= -->
         <Border Grid.Row="0" Grid.RowSpan="2"
                 IsVisible="{Binding IsAddModalOpen}"
                 Background="{DynamicResource ModalOverlayBrush}">
@@ -376,15 +603,15 @@
                     BorderBrush="{DynamicResource BorderBrushCustom}"
                     BorderThickness="1"
                     CornerRadius="10"
-                    Width="500"
+                    Width="520"
                     HorizontalAlignment="Center"
                     VerticalAlignment="Center"
                     Padding="22"
                     DataContext="{Binding AddDialogVm}">
-                <StackPanel Spacing="14">
+                <StackPanel Spacing="12">
                     <!-- Modal Header -->
                     <Grid ColumnDefinitions="*, Auto">
-                        <TextBlock Grid.Column="0" Text="Add Download" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center" />
+                        <TextBlock Grid.Column="0" Text="Add Download Task" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center" />
                         <Button Grid.Column="1" Classes="ghost-btn" Command="{Binding CancelCommand}" Padding="4">
                             <PathIcon Width="10" Height="10" Foreground="{DynamicResource TextSecondaryBrush}" Data="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
                         </Button>
@@ -401,16 +628,14 @@
                         <TextBox Classes="minimal-input"
                                  Text="{Binding UrlInput}"
                                  AcceptsReturn="True"
-                                 Height="70"
+                                 Height="65"
                                  TextWrapping="Wrap"
                                  Watermark="https://example.com/file.zip" />
                     </StackPanel>
 
-                    <!-- File Details Container with Glassmorphic Loading Overlay & Animations -->
-                    <Grid MinHeight="86">
-                        <!-- File Details & Metadata Section -->
-                        <StackPanel Spacing="10">
-                            <!-- File Name -->
+                    <!-- File Details Container -->
+                    <Grid MinHeight="75">
+                        <StackPanel Spacing="8">
                             <StackPanel Spacing="4">
                                 <TextBlock Text="File Name:" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" />
                                 <TextBox Classes="minimal-input" Text="{Binding CustomFileName}" Watermark="Auto-detected file name..." />
@@ -422,28 +647,21 @@
                                     BorderBrush="{DynamicResource BorderBrushCustom}"
                                     BorderThickness="1"
                                     CornerRadius="6"
-                                    Padding="12,10">
+                                    Padding="10,8">
                                 <Grid ColumnDefinitions="*, *, *, *" DataContext="{Binding CurrentMetadata}">
-                                    <!-- Size -->
-                                    <StackPanel Grid.Column="0" Spacing="3">
+                                    <StackPanel Grid.Column="0" Spacing="2">
                                         <TextBlock Text="SIZE" FontSize="9" FontWeight="Bold" Foreground="{DynamicResource TextMutedBrush}" />
                                         <TextBlock Text="{Binding FormattedSize}" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" TextTrimming="CharacterEllipsis" />
                                     </StackPanel>
-
-                                    <!-- Type -->
-                                    <StackPanel Grid.Column="1" Spacing="3">
+                                    <StackPanel Grid.Column="1" Spacing="2">
                                         <TextBlock Text="TYPE" FontSize="9" FontWeight="Bold" Foreground="{DynamicResource TextMutedBrush}" />
                                         <TextBlock Text="{Binding DisplayType}" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" TextTrimming="CharacterEllipsis" />
                                     </StackPanel>
-
-                                    <!-- Resumable -->
-                                    <StackPanel Grid.Column="2" Spacing="3">
+                                    <StackPanel Grid.Column="2" Spacing="2">
                                         <TextBlock Text="RESUMABLE" FontSize="9" FontWeight="Bold" Foreground="{DynamicResource TextMutedBrush}" />
                                         <TextBlock Text="{Binding ResumableText}" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}" TextTrimming="CharacterEllipsis" />
                                     </StackPanel>
-
-                                    <!-- Host / Domain -->
-                                    <StackPanel Grid.Column="3" Spacing="3">
+                                    <StackPanel Grid.Column="3" Spacing="2">
                                         <TextBlock Text="HOST" FontSize="9" FontWeight="Bold" Foreground="{DynamicResource TextMutedBrush}" />
                                         <TextBlock Text="{Binding Domain}" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" TextTrimming="CharacterEllipsis" />
                                     </StackPanel>
@@ -451,53 +669,42 @@
                             </Border>
                         </StackPanel>
 
-                        <!-- Sleek Glassmorphic Fetching Overlay with Pulsing Scanner Animation -->
+                        <!-- Scanning Overlay -->
                         <Border IsVisible="{Binding IsFetchingMetadata}"
                                 Background="{DynamicResource GlassOverlayBgBrush}"
                                 BorderBrush="{DynamicResource GlassOverlayBorderBrush}"
                                 BorderThickness="1"
-                                CornerRadius="6"
-                                HorizontalAlignment="Stretch"
-                                VerticalAlignment="Stretch">
-                            <Grid RowDefinitions="*, Auto">
-                                <StackPanel Grid.Row="0" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="7">
-                                    <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
-                                        <!-- Pulsing Glow Dot -->
-                                        <Ellipse Width="8" Height="8" Fill="{DynamicResource AccentBrush}" Classes="pulse-dot" VerticalAlignment="Center" />
-                                        <TextBlock Text="Fetching file details from server..."
-                                                   FontSize="12"
-                                                   FontWeight="SemiBold"
-                                                   Foreground="{DynamicResource TextPrimaryBrush}"
-                                                   VerticalAlignment="Center" />
-                                    </StackPanel>
-                                    <TextBlock Text="Probing Content-Disposition headers &amp; file size"
-                                               FontSize="10"
-                                               Foreground="{DynamicResource TextMutedBrush}"
-                                               HorizontalAlignment="Center" />
-                                </StackPanel>
-
-                                <!-- Bottom Glowing Scanning Line -->
-                                <ProgressBar Grid.Row="1" Classes="scanner-bar" Margin="0,0,0,1" />
-                            </Grid>
+                                CornerRadius="6">
+                            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="4">
+                                <TextBlock Text="Probing server headers..." FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" HorizontalAlignment="Center" />
+                                <ProgressBar Classes="scanner-bar" Width="140" />
+                            </StackPanel>
                         </Border>
                     </Grid>
 
-                    <!-- Save Directory with Browse Folder Button -->
+                    <!-- Save Directory -->
                     <StackPanel Spacing="4">
                         <TextBlock Text="Save Directory:" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" />
                         <Grid ColumnDefinitions="*, Auto">
                             <TextBox Grid.Column="0" Classes="minimal-input" Text="{Binding SaveDirectory}" Margin="0,0,6,0" />
-                            <Button Grid.Column="1" Classes="subtle-btn" Command="{Binding BrowseFolderCommand}" Padding="10,6">
-                                <StackPanel Orientation="Horizontal" Spacing="4">
-                                    <PathIcon Width="10" Height="10" Foreground="{DynamicResource TextSecondaryBrush}" Data="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z" />
-                                    <TextBlock Text="Browse..." FontSize="11" VerticalAlignment="Center" />
-                                </StackPanel>
-                            </Button>
+                            <Button Grid.Column="1" Classes="subtle-btn" Command="{Binding BrowseFolderCommand}" Padding="10,6" Content="Browse..." />
                         </Grid>
                     </StackPanel>
 
-                    <!-- Start Immediately Checkbox -->
-                    <CheckBox IsChecked="{Binding StartImmediately}" Content="Start downloading immediately" FontSize="11" />
+                    <!-- Acceleration Threads & Scheduling -->
+                    <Grid ColumnDefinitions="*, *">
+                        <StackPanel Grid.Column="0" Spacing="4" Margin="0,0,4,0">
+                            <TextBlock Text="Parallel Threads:" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" />
+                            <ComboBox ItemsSource="{Binding AvailableThreadCounts}" SelectedItem="{Binding SelectedThreadCount}" FontSize="11" HorizontalAlignment="Stretch" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="1" Spacing="4" Margin="4,0,0,0">
+                            <CheckBox IsChecked="{Binding IsScheduled}" Content="Schedule Start Time" FontSize="11" Margin="0,0,0,2" />
+                            <TextBox Classes="minimal-input" Text="{Binding ScheduledTimeString}" IsEnabled="{Binding IsScheduled}" Watermark="HH:mm (e.g. 02:00)" FontSize="11" />
+                        </StackPanel>
+                    </Grid>
+
+                    <!-- Options -->
+                    <CheckBox IsChecked="{Binding StartImmediately}" Content="Start downloading immediately" FontSize="11" IsVisible="{Binding !IsScheduled}" />
 
                     <!-- Actions -->
                     <Grid ColumnDefinitions="*, Auto, Auto" Margin="0,4,0,0">

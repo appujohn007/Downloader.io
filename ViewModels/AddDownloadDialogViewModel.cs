@@ -20,9 +20,10 @@ public partial class AddDownloadDialogViewModel : ViewModelBase
     private readonly IClipboardService _clipboardService;
     private readonly IFileService _fileService;
     private readonly IDownloadService _downloadService;
+    private readonly ISettingsService _settingsService;
     private CancellationTokenSource? _probeCts;
 
-    public event Action<List<(string Url, string FileName, string SaveDir)>, bool>? OnConfirmed;
+    public event Action<List<(string Url, string FileName, string SaveDir, int Threads, bool AutoExtract, DateTime? ScheduledTime)>, bool>? OnConfirmed;
     public event Action? OnCanceled;
 
     [ObservableProperty]
@@ -36,6 +37,18 @@ public partial class AddDownloadDialogViewModel : ViewModelBase
 
     [ObservableProperty]
     private bool _startImmediately = true;
+
+    [ObservableProperty]
+    private int _selectedThreadCount = 8;
+
+    [ObservableProperty]
+    private bool _autoExtractZip = false;
+
+    [ObservableProperty]
+    private bool _isScheduled = false;
+
+    [ObservableProperty]
+    private string _scheduledTimeString = DateTime.Now.AddHours(1).ToString("HH:mm");
 
     [ObservableProperty]
     private string _statusMessage = string.Empty;
@@ -55,15 +68,23 @@ public partial class AddDownloadDialogViewModel : ViewModelBase
     [ObservableProperty]
     private bool _hasDetectedInfo;
 
+    public int[] AvailableThreadCounts { get; } = new[] { 1, 2, 4, 8, 16 };
+
     public AddDownloadDialogViewModel(
         IClipboardService clipboardService,
         IFileService fileService,
-        IDownloadService downloadService)
+        IDownloadService downloadService,
+        ISettingsService? settingsService = null)
     {
         _clipboardService = clipboardService;
         _fileService = fileService;
         _downloadService = downloadService;
-        SaveDirectory = _fileService.GetDefaultDownloadDirectory();
+        _settingsService = settingsService ?? new SettingsService();
+
+        var settings = _settingsService.LoadSettings();
+        SaveDirectory = settings.DefaultDownloadDirectory;
+        SelectedThreadCount = settings.DefaultThreadsPerDownload;
+        AutoExtractZip = settings.IsAutoExtractZipEnabled;
     }
 
     partial void OnUrlInputChanged(string value)
@@ -118,6 +139,8 @@ public partial class AddDownloadDialogViewModel : ViewModelBase
                         CustomFileName = meta.FileName;
                         CurrentMetadata = meta;
                         HasDetectedInfo = true;
+
+                        ApplySmartFolderRouting(meta.FileName);
                     });
                 }
             }
@@ -128,11 +151,35 @@ public partial class AddDownloadDialogViewModel : ViewModelBase
                     Dispatcher.UIThread.Post(() =>
                     {
                         IsFetchingMetadata = false;
-                        CustomFileName = _downloadService.ExtractFileNameFromUrl(url);
+                        var name = _downloadService.ExtractFileNameFromUrl(url);
+                        CustomFileName = name;
+                        ApplySmartFolderRouting(name);
                     });
                 }
             }
         }, ct);
+    }
+
+    private void ApplySmartFolderRouting(string fileName)
+    {
+        var settings = _settingsService.LoadSettings();
+        if (!settings.IsSmartFolderRoutingEnabled) return;
+
+        var category = DownloadItem.DetermineCategory(fileName);
+        var subDir = category switch
+        {
+            DownloadCategory.Compressed => "Archives",
+            DownloadCategory.Programs => "Programs",
+            DownloadCategory.Media => "Media",
+            DownloadCategory.Documents => "Documents",
+            _ => string.Empty
+        };
+
+        if (!string.IsNullOrEmpty(subDir))
+        {
+            var baseDir = settings.DefaultDownloadDirectory;
+            SaveDirectory = Path.Combine(baseDir, subDir);
+        }
     }
 
     [RelayCommand]
@@ -200,28 +247,35 @@ public partial class AddDownloadDialogViewModel : ViewModelBase
             return;
         }
 
-        if (string.IsNullOrWhiteSpace(SaveDirectory) || !Directory.Exists(SaveDirectory))
+        if (string.IsNullOrWhiteSpace(SaveDirectory))
         {
-            try
-            {
-                if (!string.IsNullOrWhiteSpace(SaveDirectory))
-                {
-                    Directory.CreateDirectory(SaveDirectory);
-                }
-                else
-                {
-                    SaveDirectory = _fileService.GetDefaultDownloadDirectory();
-                }
-            }
-            catch (Exception ex)
-            {
-                HasError = true;
-                StatusMessage = $"Invalid download folder: {ex.Message}";
-                return;
-            }
+            SaveDirectory = _fileService.GetDefaultDownloadDirectory();
         }
 
-        var results = new List<(string Url, string FileName, string SaveDir)>();
+        try
+        {
+            if (!Directory.Exists(SaveDirectory))
+            {
+                Directory.CreateDirectory(SaveDirectory);
+            }
+        }
+        catch (Exception ex)
+        {
+            HasError = true;
+            StatusMessage = $"Invalid download folder: {ex.Message}";
+            return;
+        }
+
+        DateTime? scheduledTime = null;
+        if (IsScheduled && TimeSpan.TryParse(ScheduledTimeString, out var time))
+        {
+            var now = DateTime.Now;
+            var target = now.Date + time;
+            if (target < now) target = target.AddDays(1);
+            scheduledTime = target;
+        }
+
+        var results = new List<(string Url, string FileName, string SaveDir, int Threads, bool AutoExtract, DateTime? ScheduledTime)>();
 
         for (int i = 0; i < urls.Count; i++)
         {
@@ -236,10 +290,10 @@ public partial class AddDownloadDialogViewModel : ViewModelBase
                 fileName = _downloadService.ExtractFileNameFromUrl(url);
             }
 
-            results.Add((url, fileName, SaveDirectory));
+            results.Add((url, fileName, SaveDirectory, SelectedThreadCount, AutoExtractZip, scheduledTime));
         }
 
-        OnConfirmed?.Invoke(results, StartImmediately);
+        OnConfirmed?.Invoke(results, StartImmediately && !IsScheduled);
     }
 
     [RelayCommand]
