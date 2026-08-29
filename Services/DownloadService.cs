@@ -422,9 +422,9 @@ public class DownloadService : IDownloadService
                 }
 
                 // Multi-tiered UI update cadence:
-                // 1. Progress Bar & Downloaded bytes: update every ~100ms for smooth continuous fluid flow
-                // 2. Speed text & ETA: update every ~700ms for human readability without flickering
-                if (uiProgressTimer.ElapsedMilliseconds >= 100)
+                // 1. Progress Bar & Downloaded bytes: update every ~35ms for ultra-smooth fluid flow
+                // 2. Speed text & ETA: update every ~650ms for human readability without flickering
+                if (uiProgressTimer.ElapsedMilliseconds >= 35)
                 {
                     double progressPct = 0;
                     if (currentTotalBytes > 0)

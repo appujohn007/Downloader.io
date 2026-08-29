@@ -88,7 +88,7 @@ public class BlockProgressBackground : Control
     {
         _animTimer = new DispatcherTimer
         {
-            Interval = TimeSpan.FromMilliseconds(30)
+            Interval = TimeSpan.FromMilliseconds(16)
         };
         _animTimer.Tick += OnAnimationTick;
     }
@@ -201,13 +201,15 @@ public class BlockProgressBackground : Control
     {
         bool needsRedraw = false;
 
-        // Smooth continuous progress interpolation without resetting
+        // Smooth continuous 60fps liquid damping interpolation
         double target = Math.Clamp(Progress, 0.0, 100.0);
         double diff = target - _animatedProgress;
 
-        if (Math.Abs(diff) > 0.05)
+        if (Math.Abs(diff) > 0.01)
         {
-            _animatedProgress += diff * 0.22;
+            double step = diff * 0.14;
+            if (Math.Abs(step) < 0.004) step = Math.Sign(diff) * 0.004;
+            _animatedProgress += step;
             needsRedraw = true;
         }
         else if (_animatedProgress != target)
@@ -219,7 +221,7 @@ public class BlockProgressBackground : Control
         // Connecting wave or indeterminate live stream animation phase
         if (IsConnecting || IsIndeterminate)
         {
-            _animPhase = (_animPhase + 0.11) % (Math.PI * 2.0);
+            _animPhase = (_animPhase + 0.07) % (Math.PI * 2.0);
             needsRedraw = true;
         }
 
@@ -227,7 +229,7 @@ public class BlockProgressBackground : Control
         {
             InvalidateVisual();
         }
-        else if (!IsConnecting && !IsIndeterminate && Math.Abs(_animatedProgress - target) <= 0.05)
+        else if (!IsConnecting && !IsIndeterminate && Math.Abs(_animatedProgress - target) <= 0.01)
         {
             _animTimer.Stop();
         }
@@ -331,23 +333,24 @@ public class BlockProgressBackground : Control
                 }
                 else if (cellIndex < filledCount)
                 {
-                    // Fully filled cell
+                    // Fully filled cell with liquid gradient
                     var fillBrush = new SolidColorBrush(Color.FromArgb(fillBaseAlpha, baseColor.R, baseColor.G, baseColor.B));
                     var borderPen = new Pen(new SolidColorBrush(Color.FromArgb(borderBaseAlpha, baseColor.R, baseColor.G, baseColor.B)), 0.9);
 
                     context.DrawRectangle(fillBrush, borderPen, rrect);
                     context.DrawLine(glassHighlightPen, new Point(x + radius, y + 0.8), new Point(x + cellW - radius, y + 0.8));
                 }
-                else if (cellIndex == filledCount && fractionalCell > 0.03)
+                else if (cellIndex == filledCount && fractionalCell > 0.01)
                 {
-                    // Smooth fractional leading cell
-                    byte fillAlpha = (byte)Math.Clamp(fillBaseAlpha * fractionalCell, 6, fillBaseAlpha);
-                    byte borderAlpha = (byte)Math.Clamp(borderBaseAlpha * fractionalCell, 18, borderBaseAlpha);
+                    // Silky liquid leading cell transition
+                    byte fillAlpha = (byte)Math.Clamp(fillBaseAlpha * fractionalCell, baseUnfilledFillAlpha, fillBaseAlpha);
+                    byte borderAlpha = (byte)Math.Clamp(baseUnfilledBorderAlpha + ((borderBaseAlpha - baseUnfilledBorderAlpha) * fractionalCell), baseUnfilledBorderAlpha, borderBaseAlpha);
 
                     var fillBrush = new SolidColorBrush(Color.FromArgb(fillAlpha, baseColor.R, baseColor.G, baseColor.B));
                     var borderPen = new Pen(new SolidColorBrush(Color.FromArgb(borderAlpha, baseColor.R, baseColor.G, baseColor.B)), 0.9);
 
                     context.DrawRectangle(fillBrush, borderPen, rrect);
+                    context.DrawLine(glassHighlightPen, new Point(x + radius, y + 0.8), new Point(x + (cellW * fractionalCell) - radius, y + 0.8));
                 }
                 else
                 {
@@ -380,7 +383,7 @@ public class BlockProgressBackground : Control
     }
 
     /// <summary>
-    /// Evaluates smooth horizontal 3-stop liquid gradient using selected card palette
+    /// Evaluates smooth horizontal 3-stop liquid gradient with cosine ease blending
     /// </summary>
     private static Color GetPaletteGradientColor((Color Stop0, Color Stop1, Color Stop2) pal, double t)
     {
@@ -388,7 +391,8 @@ public class BlockProgressBackground : Control
 
         if (t <= 0.5)
         {
-            double k = t / 0.5;
+            double rawK = t / 0.5;
+            double k = (1.0 - Math.Cos(rawK * Math.PI)) / 2.0;
             byte r = (byte)(pal.Stop0.R + (pal.Stop1.R - pal.Stop0.R) * k);
             byte g = (byte)(pal.Stop0.G + (pal.Stop1.G - pal.Stop0.G) * k);
             byte b = (byte)(pal.Stop0.B + (pal.Stop1.B - pal.Stop0.B) * k);
@@ -396,7 +400,8 @@ public class BlockProgressBackground : Control
         }
         else
         {
-            double k = (t - 0.5) / 0.5;
+            double rawK = (t - 0.5) / 0.5;
+            double k = (1.0 - Math.Cos(rawK * Math.PI)) / 2.0;
             byte r = (byte)(pal.Stop1.R + (pal.Stop2.R - pal.Stop1.R) * k);
             byte g = (byte)(pal.Stop1.G + (pal.Stop2.G - pal.Stop1.G) * k);
             byte b = (byte)(pal.Stop1.B + (pal.Stop2.B - pal.Stop1.B) * k);
