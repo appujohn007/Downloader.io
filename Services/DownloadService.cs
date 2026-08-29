@@ -283,8 +283,8 @@ public class DownloadService : IDownloadService
                 item.ServerHeadersSummary = $"Type: {meta.ContentType} | Host: {meta.Domain} | Resumable: {(meta.IsResumable ? "Yes" : "No")}";
             }
 
-            // Decide between Multi-threaded Segmented Download vs Single-Stream
-            int threads = Math.Clamp(item.MaxSegments > 0 ? item.MaxSegments : _settingsService.LoadSettings().DefaultThreadsPerDownload, 1, 16);
+            int configuredThreads = item.MaxSegments > 0 ? item.MaxSegments : _settingsService.CurrentSettings.DefaultThreadsPerDownload;
+            int threads = Math.Clamp(configuredThreads, 1, 16);
 
             if (meta.IsResumable && item.TotalBytes > 1024 * 1024 && threads > 1)
             {
@@ -295,28 +295,37 @@ public class DownloadService : IDownloadService
             else
             {
                 // Single-Stream Mode
+                Logger.Download($"[SINGLE-STREAM] Starting stream download for '{item.FileName}'");
                 await ProcessSingleStreamDownloadAsync(item, partialFilePath, targetFilePath, ct);
             }
 
-            // Checksum auto-calculation trigger if needed
+            // Verify final target file exists on disk
+            if (!File.Exists(targetFilePath))
+            {
+                throw new FileNotFoundException($"Downloaded file '{targetFilePath}' was not found after stream completion.");
+            }
+
+            var finalSize = new FileInfo(targetFilePath).Length;
+            item.DownloadedBytes = finalSize;
+            if (item.TotalBytes <= 0) item.TotalBytes = finalSize;
+
             item.Status = DownloadStatus.Completed;
             item.CompletedAt = DateTime.Now;
             item.SpeedBytesPerSec = 0;
             item.ProgressPercentage = 100;
-            item.DownloadedBytes = item.TotalBytes;
             UpdateUi(item);
 
             _audioNotificationService.PlayDownloadCompleted();
 
             // Auto-extract ZIP if requested
-            var settings = _settingsService.LoadSettings();
+            var settings = _settingsService.CurrentSettings;
             if ((item.AutoExtractZip || settings.IsAutoExtractZipEnabled) && Path.GetExtension(targetFilePath).Equals(".zip", StringComparison.OrdinalIgnoreCase))
             {
                 var extractFolder = Path.Combine(item.SaveDirectory, Path.GetFileNameWithoutExtension(item.FileName));
                 _ = ExtractArchiveAsync(targetFilePath, extractFolder, CancellationToken.None);
             }
 
-            Logger.Success($"[COMPLETED] Successfully downloaded '{item.FileName}' to '{targetFilePath}'");
+            Logger.Success($"[COMPLETED] Successfully downloaded '{item.FileName}' ({DownloadItem.FormatBytes(finalSize)}) to '{targetFilePath}'");
         }
         catch (OperationCanceledException)
         {
@@ -348,44 +357,44 @@ public class DownloadService : IDownloadService
     {
         long totalLength = item.TotalBytes;
 
-        // Initialize / reuse pre-allocated file
-        using (var initStream = new FileStream(partialFilePath, FileMode.OpenOrCreate, FileAccess.Write, FileShare.ReadWrite))
+        // 1. Synchronously pre-allocate file on disk
+        using (var initStream = new FileStream(partialFilePath, FileMode.OpenOrCreate, FileAccess.Write, FileShare.None))
         {
             initStream.SetLength(totalLength);
         }
 
-        // Divide file into threads
+        // 2. Synchronously divide file into thread segments
         long segmentSize = totalLength / threadCount;
+        var segmentList = new List<DownloadSegment>();
 
+        for (int i = 0; i < threadCount; i++)
+        {
+            long start = i * segmentSize;
+            long end = (i == threadCount - 1) ? (totalLength - 1) : ((i + 1) * segmentSize - 1);
+            segmentList.Add(new DownloadSegment
+            {
+                SegmentId = i + 1,
+                StartByte = start,
+                EndByte = end,
+                DownloadedBytes = 0,
+                IsActive = true,
+                IsCompleted = false
+            });
+        }
+
+        // Update UI collection
         Dispatcher.UIThread.Post(() =>
         {
             item.Segments.Clear();
-            for (int i = 0; i < threadCount; i++)
+            foreach (var seg in segmentList)
             {
-                long start = i * segmentSize;
-                long end = (i == threadCount - 1) ? (totalLength - 1) : ((i + 1) * segmentSize - 1);
-                item.Segments.Add(new DownloadSegment
-                {
-                    SegmentId = i + 1,
-                    StartByte = start,
-                    EndByte = end,
-                    DownloadedBytes = 0,
-                    IsActive = true,
-                    IsCompleted = false
-                });
+                item.Segments.Add(seg);
             }
         });
 
         item.Status = DownloadStatus.Downloading;
         UpdateUi(item);
 
-        using var fileStream = new FileStream(partialFilePath, FileMode.Open, FileAccess.Write, FileShare.ReadWrite, 81920, useAsync: true);
-        var fileHandle = fileStream.SafeFileHandle;
-
-        var tasks = new List<Task>();
-        var segmentList = item.Segments.ToList();
-
-        // Speed sampling counters
         long aggregateBytesDownloaded = 0;
         long bytesSinceLastSample = 0;
         double smoothedSpeed = 0.0;
@@ -393,150 +402,163 @@ public class DownloadService : IDownloadService
         var uiProgressTimer = Stopwatch.StartNew();
         var uiSpeedDisplayTimer = Stopwatch.StartNew();
 
-        foreach (var seg in segmentList)
-        {
-            tasks.Add(Task.Run(async () =>
-            {
-                int retries = 0;
-                bool success = false;
+        var tasks = new List<Task>();
 
-                while (!success && retries < 3)
+        // 3. Open file stream for non-blocking concurrent writes
+        using (var fileStream = new FileStream(partialFilePath, FileMode.Open, FileAccess.Write, FileShare.ReadWrite, 81920, useAsync: true))
+        {
+            var fileHandle = fileStream.SafeFileHandle;
+
+            foreach (var seg in segmentList)
+            {
+                tasks.Add(Task.Run(async () =>
                 {
-                    ct.ThrowIfCancellationRequested();
-                    try
+                    int retries = 0;
+                    bool success = false;
+
+                    while (!success && retries < 4)
                     {
-                        long currentOffset = seg.StartByte + seg.DownloadedBytes;
-                        if (currentOffset > seg.EndByte)
+                        ct.ThrowIfCancellationRequested();
+                        try
                         {
+                            long currentOffset = seg.StartByte + seg.DownloadedBytes;
+                            if (currentOffset > seg.EndByte)
+                            {
+                                seg.IsCompleted = true;
+                                seg.IsActive = false;
+                                break;
+                            }
+
+                            using var request = new HttpRequestMessage(HttpMethod.Get, item.Url);
+                            request.Headers.Range = new RangeHeaderValue(currentOffset, seg.EndByte);
+
+                            using var response = await HttpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, ct);
+
+                            // Server must return 206 Partial Content
+                            if (response.StatusCode != System.Net.HttpStatusCode.PartialContent)
+                            {
+                                throw new HttpRequestException($"Server returned HTTP {(int)response.StatusCode} ({response.ReasonPhrase}) instead of 206 Partial Content for byte range {currentOffset}-{seg.EndByte}");
+                            }
+
+                            using var stream = await response.Content.ReadAsStreamAsync(ct);
+                            var buffer = new byte[65536];
+                            int read;
+                            var segSpeedTimer = Stopwatch.StartNew();
+                            long segBytesSinceSample = 0;
+
+                            while ((read = await stream.ReadAsync(buffer, 0, buffer.Length, ct)) > 0)
+                            {
+                                await RandomAccess.WriteAsync(fileHandle, buffer.AsMemory(0, read), currentOffset, ct);
+                                currentOffset += read;
+                                seg.DownloadedBytes += read;
+                                segBytesSinceSample += read;
+
+                                Interlocked.Add(ref aggregateBytesDownloaded, read);
+                                Interlocked.Add(ref bytesSinceLastSample, read);
+
+                                // Speed limiter throttling
+                                long limit = item.SpeedCapBytesPerSec > 0 ? item.SpeedCapBytesPerSec : _settingsService.CurrentSettings.GlobalSpeedLimitBytesPerSec;
+                                if (limit > 0)
+                                {
+                                    long allowedChunk = limit / threadCount;
+                                    if (allowedChunk > 0 && segBytesSinceSample >= allowedChunk)
+                                    {
+                                        await Task.Delay(15, ct);
+                                    }
+                                }
+
+                                if (segSpeedTimer.ElapsedMilliseconds >= 300)
+                                {
+                                    double sec = segSpeedTimer.Elapsed.TotalSeconds;
+                                    if (sec > 0)
+                                    {
+                                        seg.SpeedBytesPerSec = segBytesSinceSample / sec;
+                                    }
+                                    segBytesSinceSample = 0;
+                                    segSpeedTimer.Restart();
+                                }
+                            }
+
                             seg.IsCompleted = true;
                             seg.IsActive = false;
-                            break;
+                            success = true;
                         }
-
-                        using var request = new HttpRequestMessage(HttpMethod.Get, item.Url);
-                        request.Headers.Range = new RangeHeaderValue(currentOffset, seg.EndByte);
-
-                        using var response = await HttpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, ct);
-                        if (response.StatusCode != System.Net.HttpStatusCode.PartialContent && !response.IsSuccessStatusCode)
+                        catch (OperationCanceledException)
                         {
-                            throw new HttpRequestException($"Segment {seg.SegmentId} failed with HTTP {(int)response.StatusCode}");
+                            throw;
                         }
-
-                        using var stream = await response.Content.ReadAsStreamAsync(ct);
-                        var buffer = new byte[65536];
-                        int read;
-                        var segSpeedTimer = Stopwatch.StartNew();
-                        long segBytesSinceSample = 0;
-
-                        while ((read = await stream.ReadAsync(buffer, 0, buffer.Length, ct)) > 0)
+                        catch (Exception ex)
                         {
-                            await RandomAccess.WriteAsync(fileHandle, buffer.AsMemory(0, read), currentOffset, ct);
-                            currentOffset += read;
-                            seg.DownloadedBytes += read;
-                            segBytesSinceSample += read;
-
-                            Interlocked.Add(ref aggregateBytesDownloaded, read);
-                            Interlocked.Add(ref bytesSinceLastSample, read);
-
-                            // Apply speed limit throttling if set
-                            long limit = item.SpeedCapBytesPerSec > 0 ? item.SpeedCapBytesPerSec : _settingsService.LoadSettings().GlobalSpeedLimitBytesPerSec;
-                            if (limit > 0)
-                            {
-                                long allowedChunk = limit / threadCount;
-                                if (allowedChunk > 0 && segBytesSinceSample >= allowedChunk)
-                                {
-                                    await Task.Delay(15, ct);
-                                }
-                            }
-
-                            if (segSpeedTimer.ElapsedMilliseconds >= 300)
-                            {
-                                double sec = segSpeedTimer.Elapsed.TotalSeconds;
-                                if (sec > 0)
-                                {
-                                    seg.SpeedBytesPerSec = segBytesSinceSample / sec;
-                                }
-                                segBytesSinceSample = 0;
-                                segSpeedTimer.Restart();
-                            }
+                            retries++;
+                            item.RetryAttempts = retries;
+                            Logger.Warn($"[RETRY] Segment {seg.SegmentId} failed: {ex.Message}. Attempt {retries}/4...");
+                            await Task.Delay(1000 * retries, ct);
                         }
-
-                        seg.IsCompleted = true;
-                        seg.IsActive = false;
-                        success = true;
                     }
-                    catch (OperationCanceledException)
+
+                    if (!success)
                     {
-                        throw;
+                        throw new IOException($"Segment {seg.SegmentId} failed after {retries} retries.");
                     }
-                    catch (Exception ex)
-                    {
-                        retries++;
-                        item.RetryAttempts = retries;
-                        Logger.Warn($"[RETRY] Segment {seg.SegmentId} encountered error ({ex.Message}). Retrying ({retries}/3)...");
-                        await Task.Delay(1000 * retries, ct);
-                    }
-                }
-
-                if (!success)
-                {
-                    throw new Exception($"Segment {seg.SegmentId} failed after 3 retry attempts.");
-                }
-            }, ct));
-        }
-
-        // Monitoring task to keep UI updated smoothly
-        var monitorTask = Task.Run(async () =>
-        {
-            while (!Task.WhenAll(tasks).IsCompleted)
-            {
-                if (ct.IsCancellationRequested) break;
-
-                if (speedTimer.ElapsedMilliseconds >= 250)
-                {
-                    double sec = speedTimer.Elapsed.TotalSeconds;
-                    long bytesSampled = Interlocked.Exchange(ref bytesSinceLastSample, 0);
-                    if (sec > 0)
-                    {
-                        double instantSpeed = bytesSampled / sec;
-                        smoothedSpeed = smoothedSpeed <= 0 ? instantSpeed : (0.25 * instantSpeed) + (0.75 * smoothedSpeed);
-                    }
-                    speedTimer.Restart();
-                }
-
-                if (uiProgressTimer.ElapsedMilliseconds >= 40)
-                {
-                    long totalDownloaded = aggregateBytesDownloaded;
-                    double progressPct = totalLength > 0 ? Math.Clamp(((double)totalDownloaded / totalLength) * 100.0, 0, 100) : 0;
-                    bool updateSpeed = uiSpeedDisplayTimer.ElapsedMilliseconds >= 600;
-                    if (updateSpeed) uiSpeedDisplayTimer.Restart();
-
-                    Dispatcher.UIThread.Post(() =>
-                    {
-                        item.UpdateProgressMetrics(totalDownloaded, totalLength, progressPct, smoothedSpeed, updateSpeed);
-                    }, DispatcherPriority.Normal);
-
-                    uiProgressTimer.Restart();
-                }
-
-                await Task.Delay(35, ct);
+                }, ct));
             }
-        }, ct);
 
-        await Task.WhenAll(tasks);
-        await monitorTask;
-        await fileStream.FlushAsync(ct);
+            // Monitor task for fluid UI updates
+            var monitorTask = Task.Run(async () =>
+            {
+                while (!Task.WhenAll(tasks).IsCompleted)
+                {
+                    if (ct.IsCancellationRequested) break;
 
-        // Finalize file
-        try
+                    if (speedTimer.ElapsedMilliseconds >= 250)
+                    {
+                        double sec = speedTimer.Elapsed.TotalSeconds;
+                        long bytesSampled = Interlocked.Exchange(ref bytesSinceLastSample, 0);
+                        if (sec > 0)
+                        {
+                            double instantSpeed = bytesSampled / sec;
+                            smoothedSpeed = smoothedSpeed <= 0 ? instantSpeed : (0.25 * instantSpeed) + (0.75 * smoothedSpeed);
+                        }
+                        speedTimer.Restart();
+                    }
+
+                    if (uiProgressTimer.ElapsedMilliseconds >= 40)
+                    {
+                        long totalDownloaded = aggregateBytesDownloaded;
+                        double progressPct = totalLength > 0 ? Math.Clamp(((double)totalDownloaded / totalLength) * 100.0, 0, 100) : 0;
+                        bool updateSpeed = uiSpeedDisplayTimer.ElapsedMilliseconds >= 600;
+                        if (updateSpeed) uiSpeedDisplayTimer.Restart();
+
+                        Dispatcher.UIThread.Post(() =>
+                        {
+                            item.UpdateProgressMetrics(totalDownloaded, totalLength, progressPct, smoothedSpeed, updateSpeed);
+                        }, DispatcherPriority.Normal);
+
+                        uiProgressTimer.Restart();
+                    }
+
+                    await Task.Delay(35, ct);
+                }
+            }, ct);
+
+            await Task.WhenAll(tasks);
+            await monitorTask;
+            await fileStream.FlushAsync(ct);
+        } // fileStream is now fully flushed and disposed
+
+        // 4. Validate integrity of all segments
+        long sumDownloaded = segmentList.Sum(s => s.DownloadedBytes);
+        if (sumDownloaded < totalLength)
         {
-            if (File.Exists(finalFilePath)) File.Delete(finalFilePath);
-            if (File.Exists(partialFilePath)) File.Move(partialFilePath, finalFilePath);
+            throw new IOException($"Segmented download incomplete: expected {totalLength} bytes, received {sumDownloaded} bytes.");
         }
-        catch (Exception ex)
+
+        // 5. Promote partial file to final target
+        if (File.Exists(finalFilePath))
         {
-            Logger.Warn($"Rename partial file failed: {ex.Message}");
+            File.Delete(finalFilePath);
         }
+        File.Move(partialFilePath, finalFilePath);
     }
 
     private async Task ProcessSingleStreamDownloadAsync(
@@ -611,74 +633,72 @@ public class DownloadService : IDownloadService
 
         UpdateUi(item);
 
-        using var contentStream = await response.Content.ReadAsStreamAsync(ct);
-        using (var fileStream = new FileStream(
-            partialFilePath,
-            initialBytes > 0 ? FileMode.Append : FileMode.Create,
-            FileAccess.Write,
-            FileShare.ReadWrite,
-            bufferSize: 81920,
-            useAsync: true))
+        using (var contentStream = await response.Content.ReadAsStreamAsync(ct))
         {
-            var buffer = new byte[81920];
-            int bytesRead;
-            long bytesSinceLastSample = 0;
-            double smoothedSpeed = 0.0;
-
-            var speedSampleTimer = Stopwatch.StartNew();
-            var uiProgressTimer = Stopwatch.StartNew();
-            var uiSpeedDisplayTimer = Stopwatch.StartNew();
-
-            while ((bytesRead = await contentStream.ReadAsync(buffer, 0, buffer.Length, ct)) > 0)
+            using (var fileStream = new FileStream(
+                partialFilePath,
+                initialBytes > 0 ? FileMode.Append : FileMode.Create,
+                FileAccess.Write,
+                FileShare.ReadWrite,
+                bufferSize: 81920,
+                useAsync: true))
             {
-                await fileStream.WriteAsync(buffer, 0, bytesRead, ct);
+                var buffer = new byte[81920];
+                int bytesRead;
+                long bytesSinceLastSample = 0;
+                double smoothedSpeed = 0.0;
 
-                currentDownloadedBytes += bytesRead;
-                bytesSinceLastSample += bytesRead;
+                var speedSampleTimer = Stopwatch.StartNew();
+                var uiProgressTimer = Stopwatch.StartNew();
+                var uiSpeedDisplayTimer = Stopwatch.StartNew();
 
-                if (speedSampleTimer.ElapsedMilliseconds >= 250)
+                while ((bytesRead = await contentStream.ReadAsync(buffer, 0, buffer.Length, ct)) > 0)
                 {
-                    var elapsedSec = speedSampleTimer.Elapsed.TotalSeconds;
-                    if (elapsedSec > 0)
+                    await fileStream.WriteAsync(buffer, 0, bytesRead, ct);
+
+                    currentDownloadedBytes += bytesRead;
+                    bytesSinceLastSample += bytesRead;
+
+                    if (speedSampleTimer.ElapsedMilliseconds >= 250)
                     {
-                        var instantSpeed = bytesSinceLastSample / elapsedSec;
-                        smoothedSpeed = smoothedSpeed <= 0 ? instantSpeed : (0.25 * instantSpeed) + (0.75 * smoothedSpeed);
+                        var elapsedSec = speedSampleTimer.Elapsed.TotalSeconds;
+                        if (elapsedSec > 0)
+                        {
+                            var instantSpeed = bytesSinceLastSample / elapsedSec;
+                            smoothedSpeed = smoothedSpeed <= 0 ? instantSpeed : (0.25 * instantSpeed) + (0.75 * smoothedSpeed);
+                        }
+                        bytesSinceLastSample = 0;
+                        speedSampleTimer.Restart();
                     }
-                    bytesSinceLastSample = 0;
-                    speedSampleTimer.Restart();
-                }
 
-                if (uiProgressTimer.ElapsedMilliseconds >= 35)
-                {
-                    double progressPct = currentTotalBytes > 0 ? Math.Clamp(((double)currentDownloadedBytes / currentTotalBytes) * 100.0, 0, 100) : 0;
-                    bool updateSpeedDisplay = uiSpeedDisplayTimer.ElapsedMilliseconds >= 700;
-                    if (updateSpeedDisplay) uiSpeedDisplayTimer.Restart();
-
-                    long snapDownloaded = currentDownloadedBytes;
-                    long snapTotal = currentTotalBytes;
-                    double snapSpeed = smoothedSpeed;
-
-                    Dispatcher.UIThread.Post(() =>
+                    if (uiProgressTimer.ElapsedMilliseconds >= 35)
                     {
-                        item.UpdateProgressMetrics(snapDownloaded, snapTotal, progressPct, snapSpeed, updateSpeedDisplay);
-                    }, DispatcherPriority.Normal);
+                        double progressPct = currentTotalBytes > 0 ? Math.Clamp(((double)currentDownloadedBytes / currentTotalBytes) * 100.0, 0, 100) : 0;
+                        bool updateSpeedDisplay = uiSpeedDisplayTimer.ElapsedMilliseconds >= 700;
+                        if (updateSpeedDisplay) uiSpeedDisplayTimer.Restart();
 
-                    uiProgressTimer.Restart();
+                        long snapDownloaded = currentDownloadedBytes;
+                        long snapTotal = currentTotalBytes;
+                        double snapSpeed = smoothedSpeed;
+
+                        Dispatcher.UIThread.Post(() =>
+                        {
+                            item.UpdateProgressMetrics(snapDownloaded, snapTotal, progressPct, snapSpeed, updateSpeedDisplay);
+                        }, DispatcherPriority.Normal);
+
+                        uiProgressTimer.Restart();
+                    }
                 }
-            }
 
-            await fileStream.FlushAsync(ct);
+                await fileStream.FlushAsync(ct);
+            } // fileStream is now fully flushed and disposed
         }
 
-        try
+        if (File.Exists(finalFilePath))
         {
-            if (File.Exists(finalFilePath)) File.Delete(finalFilePath);
-            if (File.Exists(partialFilePath)) File.Move(partialFilePath, finalFilePath);
+            File.Delete(finalFilePath);
         }
-        catch (Exception ex)
-        {
-            Logger.Warn($"Rename file error: {ex.Message}");
-        }
+        File.Move(partialFilePath, finalFilePath);
     }
 
     public async Task<string> ComputeHashAsync(string filePath, string algorithm, CancellationToken ct = default)

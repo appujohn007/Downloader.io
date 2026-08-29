@@ -7,8 +7,10 @@ namespace DownloaderApp.Services;
 
 public interface ISettingsService
 {
+    AppSettings CurrentSettings { get; }
     AppSettings LoadSettings();
     void SaveSettings(AppSettings settings);
+    event Action<AppSettings>? SettingsChanged;
 }
 
 public class SettingsService : ISettingsService
@@ -24,8 +26,19 @@ public class SettingsService : ISettingsService
         WriteIndented = true
     };
 
+    private AppSettings? _cachedSettings;
+
+    public event Action<AppSettings>? SettingsChanged;
+
+    public AppSettings CurrentSettings => _cachedSettings ?? LoadSettings();
+
     public AppSettings LoadSettings()
     {
+        if (_cachedSettings != null)
+        {
+            return _cachedSettings;
+        }
+
         try
         {
             if (File.Exists(SettingsFilePath))
@@ -34,7 +47,8 @@ public class SettingsService : ISettingsService
                 var settings = JsonSerializer.Deserialize<AppSettings>(json, JsonOptions);
                 if (settings != null)
                 {
-                    Logger.Info($"[SETTINGS] Loaded settings from {SettingsFilePath} (Theme: {(settings.IsDarkMode ? "Dark" : "Light")})");
+                    _cachedSettings = settings;
+                    Logger.Info($"[SETTINGS] Initialized settings from {SettingsFilePath} (Theme: {(settings.IsDarkMode ? "Dark" : "Light")})");
                     return settings;
                 }
             }
@@ -45,6 +59,7 @@ public class SettingsService : ISettingsService
         }
 
         var defaults = new AppSettings();
+        _cachedSettings = defaults;
         SaveSettings(defaults);
         return defaults;
     }
@@ -53,6 +68,8 @@ public class SettingsService : ISettingsService
     {
         try
         {
+            _cachedSettings = settings;
+
             if (!Directory.Exists(SettingsDirectory))
             {
                 Directory.CreateDirectory(SettingsDirectory);
@@ -61,6 +78,8 @@ public class SettingsService : ISettingsService
             var json = JsonSerializer.Serialize(settings, JsonOptions);
             File.WriteAllText(SettingsFilePath, json);
             Logger.Debug($"[SETTINGS] Saved settings to {SettingsFilePath}");
+
+            SettingsChanged?.Invoke(settings);
         }
         catch (Exception ex)
         {

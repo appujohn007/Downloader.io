@@ -37,29 +37,48 @@ public class ClipboardSnifferService : IClipboardSnifferService
         _clipboardService = clipboardService;
         _settingsService = settingsService;
 
+        _settingsService.SettingsChanged += OnSettingsChanged;
+
         _timer = new DispatcherTimer
         {
-            Interval = TimeSpan.FromMilliseconds(1200)
+            Interval = TimeSpan.FromMilliseconds(1500)
         };
         _timer.Tick += async (s, e) => await CheckClipboardAsync();
     }
 
+    private void OnSettingsChanged(Models.AppSettings settings)
+    {
+        if (settings.IsClipboardSnifferEnabled && !_timer.IsEnabled)
+        {
+            Start();
+        }
+        else if (!settings.IsClipboardSnifferEnabled && _timer.IsEnabled)
+        {
+            Stop();
+        }
+    }
+
     public void Start()
     {
-        _timer.Start();
-        Logger.Info("[SNIFFER] Clipboard sniffer daemon started.");
+        if (!_timer.IsEnabled)
+        {
+            _timer.Start();
+            Logger.Debug("[SNIFFER] Clipboard sniffer active.");
+        }
     }
 
     public void Stop()
     {
-        _timer.Stop();
-        Logger.Info("[SNIFFER] Clipboard sniffer daemon stopped.");
+        if (_timer.IsEnabled)
+        {
+            _timer.Stop();
+            Logger.Debug("[SNIFFER] Clipboard sniffer paused.");
+        }
     }
 
     private async Task CheckClipboardAsync()
     {
-        var settings = _settingsService.LoadSettings();
-        if (!settings.IsClipboardSnifferEnabled) return;
+        if (!_settingsService.CurrentSettings.IsClipboardSnifferEnabled) return;
 
         try
         {
@@ -89,8 +108,7 @@ public class ClipboardSnifferService : IClipboardSnifferService
         }
         catch
         {
-            // Ignore clipboard access exceptions (e.g. locked by another app)
+            // Ignore clipboard access exceptions
         }
     }
 }
-
