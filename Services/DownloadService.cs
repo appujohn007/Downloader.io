@@ -8,6 +8,7 @@ using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Security.Cryptography;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -288,7 +289,7 @@ public class DownloadService : IDownloadService
 
             if (meta.IsResumable && item.TotalBytes > 1024 * 1024 && threads > 1)
             {
-                // Multi-threaded Segmented Mode
+                // Multi-threaded Segmented Mode with Full Resumption Support
                 Logger.Download($"[ACCELERATION] Launching {threads}-threaded accelerated download for '{item.FileName}' ({DownloadItem.FormatBytes(item.TotalBytes)})");
                 await ProcessSegmentedDownloadAsync(item, partialFilePath, targetFilePath, threads, ct);
             }
@@ -334,6 +335,7 @@ public class DownloadService : IDownloadService
                 item.Status = DownloadStatus.Paused;
             }
             item.SpeedBytesPerSec = 0;
+            SaveSegmentsMeta(item, item.Segments.ToList());
             UpdateUi(item);
             Logger.Warn($"[PAUSED/CANCELLED] Download '{item.FileName}' interrupted by user.");
         }
@@ -342,6 +344,7 @@ public class DownloadService : IDownloadService
             item.Status = DownloadStatus.Failed;
             item.ErrorMessage = ex.Message;
             item.SpeedBytesPerSec = 0;
+            SaveSegmentsMeta(item, item.Segments.ToList());
             UpdateUi(item);
             _audioNotificationService.PlayDownloadFailed();
             Logger.Error($"[FAILED] Download '{item.FileName}' encountered an error: {ex.Message}", ex);
@@ -357,29 +360,48 @@ public class DownloadService : IDownloadService
     {
         long totalLength = item.TotalBytes;
 
-        // 1. Synchronously pre-allocate file on disk
-        using (var initStream = new FileStream(partialFilePath, FileMode.OpenOrCreate, FileAccess.Write, FileShare.None))
+        // 1. Synchronously pre-allocate partial file if new or size mismatch
+        if (!File.Exists(partialFilePath) || new FileInfo(partialFilePath).Length != totalLength)
         {
-            initStream.SetLength(totalLength);
+            using (var initStream = new FileStream(partialFilePath, FileMode.OpenOrCreate, FileAccess.Write, FileShare.None))
+            {
+                initStream.SetLength(totalLength);
+            }
         }
 
-        // 2. Synchronously divide file into thread segments
-        long segmentSize = totalLength / threadCount;
-        var segmentList = new List<DownloadSegment>();
+        // 2. Load or initialize thread segments with full state resumption
+        List<DownloadSegment> segmentList;
 
-        for (int i = 0; i < threadCount; i++)
+        if (item.Segments.Count == threadCount && item.Segments.Sum(s => s.TotalBytes) == totalLength)
         {
-            long start = i * segmentSize;
-            long end = (i == threadCount - 1) ? (totalLength - 1) : ((i + 1) * segmentSize - 1);
-            segmentList.Add(new DownloadSegment
+            // Resume from in-memory collection
+            segmentList = item.Segments.ToList();
+            Logger.Download($"[RESUME] Continuing {threadCount}-threaded download from in-memory state ({DownloadItem.FormatBytes(segmentList.Sum(s => s.DownloadedBytes))}/{DownloadItem.FormatBytes(totalLength)})");
+        }
+        else if (File.Exists(item.SegmentsMetaPath))
+        {
+            try
             {
-                SegmentId = i + 1,
-                StartByte = start,
-                EndByte = end,
-                DownloadedBytes = 0,
-                IsActive = true,
-                IsCompleted = false
-            });
+                var json = File.ReadAllText(item.SegmentsMetaPath);
+                var saved = JsonSerializer.Deserialize<List<DownloadSegment>>(json);
+                if (saved != null && saved.Count == threadCount && saved.Sum(s => s.TotalBytes) == totalLength)
+                {
+                    segmentList = saved;
+                    Logger.Download($"[RESUME] Continuing {threadCount}-threaded download from saved metadata ({DownloadItem.FormatBytes(segmentList.Sum(s => s.DownloadedBytes))}/{DownloadItem.FormatBytes(totalLength)})");
+                }
+                else
+                {
+                    segmentList = CreateNewSegments(totalLength, threadCount);
+                }
+            }
+            catch
+            {
+                segmentList = CreateNewSegments(totalLength, threadCount);
+            }
+        }
+        else
+        {
+            segmentList = CreateNewSegments(totalLength, threadCount);
         }
 
         // Update UI collection
@@ -392,15 +414,19 @@ public class DownloadService : IDownloadService
             }
         });
 
+        long initialDownloaded = segmentList.Sum(s => s.DownloadedBytes);
+        long aggregateBytesDownloaded = initialDownloaded;
+        item.DownloadedBytes = initialDownloaded;
+        item.ProgressPercentage = totalLength > 0 ? Math.Clamp(((double)initialDownloaded / totalLength) * 100.0, 0, 100) : 0;
         item.Status = DownloadStatus.Downloading;
         UpdateUi(item);
 
-        long aggregateBytesDownloaded = 0;
         long bytesSinceLastSample = 0;
         double smoothedSpeed = 0.0;
         var speedTimer = Stopwatch.StartNew();
         var uiProgressTimer = Stopwatch.StartNew();
         var uiSpeedDisplayTimer = Stopwatch.StartNew();
+        var metaSaveTimer = Stopwatch.StartNew();
 
         var tasks = new List<Task>();
 
@@ -411,6 +437,14 @@ public class DownloadService : IDownloadService
 
             foreach (var seg in segmentList)
             {
+                // If segment already finished, skip launching worker
+                if (seg.DownloadedBytes >= seg.TotalBytes && seg.TotalBytes > 0)
+                {
+                    seg.IsCompleted = true;
+                    seg.IsActive = false;
+                    continue;
+                }
+
                 tasks.Add(Task.Run(async () =>
                 {
                     int retries = 0;
@@ -428,6 +462,9 @@ public class DownloadService : IDownloadService
                                 seg.IsActive = false;
                                 break;
                             }
+
+                            seg.IsActive = true;
+                            seg.IsCompleted = false;
 
                             using var request = new HttpRequestMessage(HttpMethod.Get, item.Url);
                             request.Headers.Range = new RangeHeaderValue(currentOffset, seg.EndByte);
@@ -481,6 +518,7 @@ public class DownloadService : IDownloadService
 
                             seg.IsCompleted = true;
                             seg.IsActive = false;
+                            seg.SpeedBytesPerSec = 0;
                             success = true;
                         }
                         catch (OperationCanceledException)
@@ -503,7 +541,7 @@ public class DownloadService : IDownloadService
                 }, ct));
             }
 
-            // Monitor task for fluid UI updates
+            // Monitor task for fluid UI updates & periodic metadata persistence
             var monitorTask = Task.Run(async () =>
             {
                 while (!Task.WhenAll(tasks).IsCompleted)
@@ -537,13 +575,27 @@ public class DownloadService : IDownloadService
                         uiProgressTimer.Restart();
                     }
 
+                    // Periodic metadata persistence every 2.5 seconds
+                    if (metaSaveTimer.ElapsedMilliseconds >= 2500)
+                    {
+                        SaveSegmentsMeta(item, segmentList);
+                        metaSaveTimer.Restart();
+                    }
+
                     await Task.Delay(35, ct);
                 }
             }, ct);
 
-            await Task.WhenAll(tasks);
-            await monitorTask;
-            await fileStream.FlushAsync(ct);
+            try
+            {
+                await Task.WhenAll(tasks);
+                await monitorTask;
+                await fileStream.FlushAsync(ct);
+            }
+            finally
+            {
+                SaveSegmentsMeta(item, segmentList);
+            }
         } // fileStream is now fully flushed and disposed
 
         // 4. Validate integrity of all segments
@@ -553,12 +605,52 @@ public class DownloadService : IDownloadService
             throw new IOException($"Segmented download incomplete: expected {totalLength} bytes, received {sumDownloaded} bytes.");
         }
 
-        // 5. Promote partial file to final target
+        // 5. Delete metadata sidecar on successful completion
+        if (File.Exists(item.SegmentsMetaPath))
+        {
+            try { File.Delete(item.SegmentsMetaPath); } catch {}
+        }
+
+        // 6. Promote partial file to final target
         if (File.Exists(finalFilePath))
         {
             File.Delete(finalFilePath);
         }
         File.Move(partialFilePath, finalFilePath);
+    }
+
+    private static List<DownloadSegment> CreateNewSegments(long totalLength, int threadCount)
+    {
+        long segmentSize = totalLength / threadCount;
+        var list = new List<DownloadSegment>();
+        for (int i = 0; i < threadCount; i++)
+        {
+            long start = i * segmentSize;
+            long end = (i == threadCount - 1) ? (totalLength - 1) : ((i + 1) * segmentSize - 1);
+            list.Add(new DownloadSegment
+            {
+                SegmentId = i + 1,
+                StartByte = start,
+                EndByte = end,
+                DownloadedBytes = 0,
+                IsActive = true,
+                IsCompleted = false
+            });
+        }
+        return list;
+    }
+
+    private static void SaveSegmentsMeta(DownloadItem item, List<DownloadSegment> segments)
+    {
+        try
+        {
+            var json = JsonSerializer.Serialize(segments);
+            File.WriteAllText(item.SegmentsMetaPath, json);
+        }
+        catch
+        {
+            // Ignore temporary write errors during cancellation
+        }
     }
 
     private async Task ProcessSingleStreamDownloadAsync(
@@ -748,6 +840,7 @@ public class DownloadService : IDownloadService
             item.Status = DownloadStatus.Paused;
             item.SpeedBytesPerSec = 0;
             item.Cts?.Cancel();
+            SaveSegmentsMeta(item, item.Segments.ToList());
             UpdateUi(item);
         }
     }

@@ -86,6 +86,7 @@ public partial class DownloadItem : ObservableObject
 
     public string FullPath => Path.Combine(SaveDirectory, FileName);
     public string PartialPath => $"{FullPath}.downloaderio";
+    public string SegmentsMetaPath => $"{FullPath}.downloaderio.meta";
 
     public CancellationTokenSource? Cts { get; set; }
 
