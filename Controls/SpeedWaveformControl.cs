@@ -25,6 +25,7 @@ public class SpeedWaveformControl : Control
     private readonly double[] _currentPoints;
     private double _peakSpeed = 1024 * 1024; // baseline 1 MB/s scale
     private double _smoothedPeak = 1024 * 1024;
+    private double _incomingSmoothedSpeed = 0.0;
     private double _displayedSpeed = 0.0;
     private double _wavePhase = 0.0;
     private readonly DispatcherTimer _animTimer;
@@ -49,7 +50,7 @@ public class SpeedWaveformControl : Control
         _animTimer.Tick += OnAnimationTick;
         _animTimer.Start();
 
-        // Data sampling timer (every 250ms for high responsiveness)
+        // Data sampling timer (every 250ms with low-pass filter)
         _sampleTimer = new DispatcherTimer
         {
             Interval = TimeSpan.FromMilliseconds(250)
@@ -81,32 +82,35 @@ public class SpeedWaveformControl : Control
 
     private void PushDataPoint(double speed)
     {
+        // Low-pass filter to dampen sensitivity and avoid rapid spikes
+        _incomingSmoothedSpeed += (Math.Max(0, speed) - _incomingSmoothedSpeed) * 0.40;
+
         for (int i = 0; i < _targetPoints.Length - 1; i++)
         {
             _targetPoints[i] = _targetPoints[i + 1];
         }
-        _targetPoints[^1] = Math.Max(0, speed);
+        _targetPoints[^1] = _incomingSmoothedSpeed;
 
         double max = _targetPoints.Max();
-        _peakSpeed = Math.Max(max * 1.18, 1024 * 512); // At least 512 KB/s baseline
+        _peakSpeed = Math.Max(max * 1.25, 1024 * 512); // Steady baseline
     }
 
     private void OnAnimationTick(object? sender, EventArgs e)
     {
-        // Continuous traveling wave phase
-        _wavePhase = (_wavePhase + 0.038) % (Math.PI * 40.0);
+        // Slower, graceful traveling wave phase (~3x slower than before)
+        _wavePhase = (_wavePhase + 0.014) % (Math.PI * 40.0);
 
-        // Continuous smooth peak scale
-        _smoothedPeak += (_peakSpeed - _smoothedPeak) * 0.08;
+        // Relaxed, slow-damping peak scale transitions
+        _smoothedPeak += (_peakSpeed - _smoothedPeak) * 0.04;
 
         // Smooth speed numerical interpolation
-        _displayedSpeed += (CurrentSpeed - _displayedSpeed) * 0.12;
+        _displayedSpeed += (CurrentSpeed - _displayedSpeed) * 0.065;
 
-        // Smooth liquid damping interpolation for every point (60fps)
+        // Smooth liquid damping interpolation for every point (relaxed, fluid 60fps)
         for (int i = 0; i < _currentPoints.Length; i++)
         {
             double diff = _targetPoints[i] - _currentPoints[i];
-            _currentPoints[i] += diff * 0.14;
+            _currentPoints[i] += diff * 0.065;
         }
 
         InvalidateVisual();
@@ -135,56 +139,65 @@ public class SpeedWaveformControl : Control
         bool isZeroSpeed = CurrentSpeed <= 10;
 
         // Subtle background grid guidelines
-        var gridPen = new Pen(new SolidColorBrush(isLight ? Color.FromArgb(12, 15, 23, 42) : Color.FromArgb(12, 255, 255, 255)), 0.85);
+        var gridPen = new Pen(new SolidColorBrush(isLight ? Color.FromArgb(10, 15, 23, 42) : Color.FromArgb(10, 255, 255, 255)), 0.85);
         context.DrawLine(gridPen, new Point(0, height * 0.33), new Point(width, height * 0.33));
         context.DrawLine(gridPen, new Point(0, height * 0.66), new Point(width, height * 0.66));
 
-        // Generate primary curve control points with organic fluid micro-harmonics
+        // Generate primary curve control points with gentle organic fluid harmonics
         var primaryPoints = new List<Point>(pointCount);
         var ghostPoints = new List<Point>(pointCount);
+        var reflectionPoints = new List<Point>(pointCount);
+
+        double baselineY = height - 5.0;
 
         for (int i = 0; i < pointCount; i++)
         {
             double val = _currentPoints[i];
             double normalizedY = Math.Clamp(val / Math.Max(1.0, _smoothedPeak), 0.0, 1.0);
 
-            // Subtle organic fluid harmonic ripple
-            double harmonic1 = Math.Sin(_wavePhase * 1.6 + (i * 0.32)) * 1.8;
-            double harmonic2 = Math.Cos(_wavePhase * 0.9 + (i * 0.18)) * 1.2;
-            double fluidRipple = (harmonic1 + harmonic2) * (isZeroSpeed ? 0.65 : 1.35) * Math.Clamp(normalizedY + 0.25, 0.25, 1.0);
+            // Gentle organic fluid harmonic ripple
+            double harmonic1 = Math.Sin(_wavePhase * 1.2 + (i * 0.28)) * 1.3;
+            double harmonic2 = Math.Cos(_wavePhase * 0.7 + (i * 0.15)) * 0.8;
+            double fluidRipple = (harmonic1 + harmonic2) * (isZeroSpeed ? 0.5 : 1.0) * Math.Clamp(normalizedY + 0.25, 0.25, 1.0);
 
-            double baseSpan = height - 8.0;
-            double yPrimary = height - (normalizedY * baseSpan) - 4.0 - fluidRipple;
-            yPrimary = Math.Clamp(yPrimary, 2.0, height - 2.0);
+            double baseSpan = height - 10.0;
+            double yPrimary = baselineY - (normalizedY * baseSpan) - fluidRipple;
+            yPrimary = Math.Clamp(yPrimary, 3.0, baselineY);
 
             double x = i * stepX;
             primaryPoints.Add(new Point(x, yPrimary));
 
             // Secondary ghost harmonic wave offset for layered depth
-            double ghostRipple = Math.Sin(_wavePhase * 1.2 - (i * 0.28) + 1.4) * 2.2;
-            double yGhost = height - (normalizedY * 0.88 * baseSpan) - 4.0 - ghostRipple;
-            yGhost = Math.Clamp(yGhost, 2.0, height - 2.0);
+            double ghostRipple = Math.Sin(_wavePhase * 0.9 - (i * 0.24) + 1.2) * 1.5;
+            double yGhost = baselineY - (normalizedY * 0.88 * baseSpan) - ghostRipple;
+            yGhost = Math.Clamp(yGhost, 3.0, baselineY);
             ghostPoints.Add(new Point(x, yGhost));
+
+            // ================= MINUTE MIRRORED REFLECTION =================
+            double distFromBase = baselineY - yPrimary;
+            double yReflect = baselineY + (distFromBase * 0.32);
+            yReflect = Math.Clamp(yReflect, baselineY, height);
+            reflectionPoints.Add(new Point(x, yReflect));
         }
 
         // ================= 1. GHOST / SECONDARY DEPTH WAVE =================
-        var ghostGeo = BuildSmoothGeometry(ghostPoints, false, width, height);
-        var ghostColor = isLight ? Color.FromArgb(28, 59, 130, 246) : Color.FromArgb(32, 99, 102, 241);
-        var ghostPen = new Pen(new SolidColorBrush(ghostColor), 1.2, lineCap: PenLineCap.Round, lineJoin: PenLineJoin.Round);
+        var ghostGeo = BuildSmoothGeometry(ghostPoints, false, width, baselineY);
+        var ghostColor = isLight ? Color.FromArgb(20, 59, 130, 246) : Color.FromArgb(24, 99, 102, 241);
+        var ghostPen = new Pen(new SolidColorBrush(ghostColor), 1.0, lineCap: PenLineCap.Round, lineJoin: PenLineJoin.Round);
         context.DrawGeometry(null, ghostPen, ghostGeo);
 
         // ================= 2. LUMINOUS AURORA FILL UNDER CURVE =================
-        var fillGeo = BuildSmoothGeometry(primaryPoints, true, width, height);
+        var fillGeo = BuildSmoothGeometry(primaryPoints, true, width, baselineY);
 
-        // Calculate dynamic flowing gradient colors shifting across the waveform
-        double shift = (_wavePhase * 0.08) % 1.0;
+        // Calculate dynamic flowing gradient colors with relaxed, slow shift
+        double shift = (_wavePhase * 0.028) % 1.0;
         var c0 = SampleFlowingColor(shift + 0.0);
         var c1 = SampleFlowingColor(shift + 0.33);
         var c2 = SampleFlowingColor(shift + 0.66);
         var c3 = SampleFlowingColor(shift + 1.0);
 
-        byte fillTopAlpha = isLight ? (byte)32 : (byte)48;
-        byte fillMidAlpha = isLight ? (byte)14 : (byte)20;
+        byte fillTopAlpha = isLight ? (byte)26 : (byte)40;
+        byte fillMidAlpha = isLight ? (byte)10 : (byte)16;
 
         var fillBrush = new LinearGradientBrush
         {
@@ -199,13 +212,29 @@ public class SpeedWaveformControl : Control
         };
         context.DrawGeometry(fillBrush, null, fillGeo);
 
-        // ================= 3. SOFT AMBIENT GLOW HALO STROKE =================
-        var strokeGeo = BuildSmoothGeometry(primaryPoints, false, width, height);
-        byte haloAlpha = isLight ? (byte)38 : (byte)52;
-        var haloPen = new Pen(new SolidColorBrush(Color.FromArgb(haloAlpha, c0.R, c0.G, c0.B)), 4.2, lineCap: PenLineCap.Round, lineJoin: PenLineJoin.Round);
+        // ================= 3. MINUTE SUBTLE REFLECTION EFFECT =================
+        var reflectGeo = BuildSmoothGeometry(reflectionPoints, false, width, height);
+        byte reflectAlpha = isLight ? (byte)18 : (byte)24;
+        var reflectBrush = new LinearGradientBrush
+        {
+            StartPoint = new RelativePoint(0, 0, RelativeUnit.Relative),
+            EndPoint = new RelativePoint(0, 1, RelativeUnit.Relative),
+            GradientStops =
+            {
+                new GradientStop(Color.FromArgb(reflectAlpha, c1.R, c1.G, c1.B), 0.0),
+                new GradientStop(Color.FromArgb(0, c2.R, c2.G, c2.B), 1.0)
+            }
+        };
+        var reflectPen = new Pen(reflectBrush, 1.2, lineCap: PenLineCap.Round, lineJoin: PenLineJoin.Round);
+        context.DrawGeometry(null, reflectPen, reflectGeo);
+
+        // ================= 4. SOFT AMBIENT GLOW HALO STROKE =================
+        var strokeGeo = BuildSmoothGeometry(primaryPoints, false, width, baselineY);
+        byte haloAlpha = isLight ? (byte)30 : (byte)42;
+        var haloPen = new Pen(new SolidColorBrush(Color.FromArgb(haloAlpha, c0.R, c0.G, c0.B)), 3.6, lineCap: PenLineCap.Round, lineJoin: PenLineJoin.Round);
         context.DrawGeometry(null, haloPen, strokeGeo);
 
-        // ================= 4. DYNAMIC FLOWING CHROMATIC NEON STROKE =================
+        // ================= 5. DYNAMIC FLOWING CHROMATIC NEON STROKE =================
         var strokeBrush = new LinearGradientBrush
         {
             StartPoint = new RelativePoint(0, 0.5, RelativeUnit.Relative),
@@ -218,22 +247,22 @@ public class SpeedWaveformControl : Control
                 new GradientStop(c3, 1.0)
             }
         };
-        var strokePen = new Pen(strokeBrush, 2.2, lineCap: PenLineCap.Round, lineJoin: PenLineJoin.Round);
+        var strokePen = new Pen(strokeBrush, 2.0, lineCap: PenLineCap.Round, lineJoin: PenLineJoin.Round);
         context.DrawGeometry(null, strokePen, strokeGeo);
 
-        // ================= 5. LEADING CREST PULSE SPARK =================
+        // ================= 6. LEADING CREST PULSE SPARK =================
         var headPoint = primaryPoints.Last();
-        double pulseScale = 1.0 + (Math.Sin(_wavePhase * 3.0) * 0.25);
-        double outerRadius = 5.5 * pulseScale;
+        double pulseScale = 1.0 + (Math.Sin(_wavePhase * 2.2) * 0.20);
+        double outerRadius = 5.0 * pulseScale;
 
         // Outer glowing halo
-        context.DrawEllipse(new SolidColorBrush(Color.FromArgb(90, c3.R, c3.G, c3.B)), null, headPoint, outerRadius, outerRadius);
+        context.DrawEllipse(new SolidColorBrush(Color.FromArgb(80, c3.R, c3.G, c3.B)), null, headPoint, outerRadius, outerRadius);
         // Inner vibrant core
-        context.DrawEllipse(new SolidColorBrush(Color.FromRgb(c3.R, c3.G, c3.B)), null, headPoint, 3.2, 3.2);
+        context.DrawEllipse(new SolidColorBrush(Color.FromRgb(c3.R, c3.G, c3.B)), null, headPoint, 2.8, 2.8);
         // White center spark
-        context.DrawEllipse(new SolidColorBrush(Color.FromRgb(255, 255, 255)), null, headPoint, 1.6, 1.6);
+        context.DrawEllipse(new SolidColorBrush(Color.FromRgb(255, 255, 255)), null, headPoint, 1.4, 1.4);
 
-        // ================= 6. FLOATING DYNAMIC SPEED BADGE / BOX =================
+        // ================= 7. FLOATING DYNAMIC SPEED BADGE / BOX =================
         string speedText = _displayedSpeed > 50 ? $"{DownloadItem.FormatBytes((long)_displayedSpeed)}/s" : "0 B/s";
 
         var textBrush = new SolidColorBrush(isLight ? Color.FromRgb(15, 23, 42) : Color.FromRgb(248, 250, 252));
