@@ -87,6 +87,14 @@ public partial class AddDownloadDialogViewModel : ViewModelBase
         AutoExtractZip = settings.IsAutoExtractZipEnabled;
     }
 
+    partial void OnStartImmediatelyChanged(bool value)
+    {
+        if (value)
+        {
+            IsScheduled = false;
+        }
+    }
+
     partial void OnUrlInputChanged(string value)
     {
         HasError = false;

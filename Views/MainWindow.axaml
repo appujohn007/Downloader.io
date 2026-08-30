@@ -744,20 +744,38 @@
                         </Grid>
                     </StackPanel>
 
-                    <!-- Acceleration Threads & Scheduling -->
+                    <!-- Parallel Acceleration Threads & Options -->
                     <Grid ColumnDefinitions="*, *">
-                        <StackPanel Grid.Column="0" Spacing="4" Margin="0,0,4,0">
+                        <StackPanel Grid.Column="0" Spacing="4" Margin="0,0,6,0">
                             <TextBlock Text="Parallel Threads:" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" />
                             <ComboBox ItemsSource="{Binding AvailableThreadCounts}" SelectedItem="{Binding SelectedThreadCount}" FontSize="11" HorizontalAlignment="Stretch" />
                         </StackPanel>
-                        <StackPanel Grid.Column="1" Spacing="4" Margin="4,0,0,0">
-                            <CheckBox IsChecked="{Binding IsScheduled}" Content="Schedule Start Time" FontSize="11" Margin="0,0,0,2" />
-                            <TextBox Classes="minimal-input" Text="{Binding ScheduledTimeString}" IsEnabled="{Binding IsScheduled}" Watermark="HH:mm (e.g. 02:00)" FontSize="11" />
+                        <StackPanel Grid.Column="1" VerticalAlignment="Bottom" Margin="6,0,0,0">
+                            <CheckBox IsChecked="{Binding AutoExtractZip}" Content="Auto-extract ZIP archive" FontSize="11" />
                         </StackPanel>
                     </Grid>
 
-                    <!-- Options -->
-                    <CheckBox IsChecked="{Binding StartImmediately}" Content="Start downloading immediately" FontSize="11" IsVisible="{Binding !IsScheduled}" />
+                    <!-- Start Immediately & Dynamic Schedule Sub-Panel -->
+                    <StackPanel Spacing="6">
+                        <CheckBox IsChecked="{Binding StartImmediately}" Content="Start downloading immediately" FontSize="11" />
+
+                        <!-- Dynamic Schedule Time Panel (Only visible when not starting immediately) -->
+                        <Border IsVisible="{Binding !StartImmediately}"
+                                Background="{DynamicResource ChipBgBrush}"
+                                BorderBrush="{DynamicResource BorderBrushCustom}"
+                                BorderThickness="1"
+                                CornerRadius="6"
+                                Padding="12,8"
+                                Margin="0,2,0,0">
+                            <Grid ColumnDefinitions="Auto, *, Auto">
+                                <CheckBox Grid.Column="0" IsChecked="{Binding IsScheduled}" Content="Schedule Start Time:" FontSize="11" VerticalAlignment="Center" Margin="0,0,10,0" />
+                                <TextBox Grid.Column="1" Classes="minimal-input" Text="{Binding ScheduledTimeString}" IsEnabled="{Binding IsScheduled}" Watermark="HH:mm (e.g. 02:00)" FontSize="11" HorizontalAlignment="Stretch" />
+                                <Border Grid.Column="2" Background="{DynamicResource AccentSubtleBrush}" CornerRadius="4" Padding="6,3" Margin="8,0,0,0" VerticalAlignment="Center" IsVisible="{Binding IsScheduled}">
+                                    <TextBlock Text="Timer Set" FontSize="9" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" />
+                                </Border>
+                            </Grid>
+                        </Border>
+                    </StackPanel>
 
                     <!-- Actions -->
                     <Grid ColumnDefinitions="*, Auto, Auto" Margin="0,4,0,0">
