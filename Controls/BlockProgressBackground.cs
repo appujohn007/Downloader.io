@@ -585,56 +585,56 @@ public class BlockProgressBackground : Control
         switch (scenario)
         {
             case FailureScenario.CloudflareChallenge:
-                // Cloudflare Signature: Sunset Orange + Solar Amber + Ember Crimson
-                colorA = isLight ? Color.FromArgb(28, 244, 129, 32) : Color.FromArgb(44, 244, 129, 32);
-                colorB = isLight ? Color.FromArgb(18, 239, 68, 68) : Color.FromArgb(30, 220, 38, 38);
-                colorAccent = isLight ? Color.FromArgb(160, 244, 129, 32) : Color.FromArgb(220, 250, 173, 63);
-                colorGrid = isLight ? Color.FromArgb(24, 244, 129, 32) : Color.FromArgb(28, 244, 129, 32);
+                // Cloudflare Signature: Soft Sunset Orange + Ember Tint
+                colorA = isLight ? Color.FromArgb(10, 244, 129, 32) : Color.FromArgb(18, 244, 129, 32);
+                colorB = isLight ? Color.FromArgb(6, 239, 68, 68) : Color.FromArgb(12, 220, 38, 38);
+                colorAccent = isLight ? Color.FromArgb(70, 244, 129, 32) : Color.FromArgb(90, 250, 173, 63);
+                colorGrid = isLight ? Color.FromArgb(8, 244, 129, 32) : Color.FromArgb(12, 244, 129, 32);
                 break;
 
             case FailureScenario.AuthRequired:
-                // Security / Auth: Cyber Gold + Burnished Amber
-                colorA = isLight ? Color.FromArgb(26, 245, 158, 11) : Color.FromArgb(40, 245, 158, 11);
-                colorB = isLight ? Color.FromArgb(14, 217, 119, 6) : Color.FromArgb(28, 180, 83, 9);
-                colorAccent = isLight ? Color.FromArgb(160, 245, 158, 11) : Color.FromArgb(220, 251, 191, 36);
-                colorGrid = isLight ? Color.FromArgb(22, 245, 158, 11) : Color.FromArgb(28, 245, 158, 11);
+                // Security / Auth: Soft Cyber Gold + Amber
+                colorA = isLight ? Color.FromArgb(10, 245, 158, 11) : Color.FromArgb(16, 245, 158, 11);
+                colorB = isLight ? Color.FromArgb(6, 217, 119, 6) : Color.FromArgb(10, 180, 83, 9);
+                colorAccent = isLight ? Color.FromArgb(70, 245, 158, 11) : Color.FromArgb(90, 251, 191, 36);
+                colorGrid = isLight ? Color.FromArgb(8, 245, 158, 11) : Color.FromArgb(12, 245, 158, 11);
                 break;
 
             case FailureScenario.NotFound:
-                // 404 / Missing: Neon Indigo + Deep Violet
-                colorA = isLight ? Color.FromArgb(26, 99, 102, 241) : Color.FromArgb(40, 99, 102, 241);
-                colorB = isLight ? Color.FromArgb(14, 139, 92, 246) : Color.FromArgb(28, 124, 58, 237);
-                colorAccent = isLight ? Color.FromArgb(160, 99, 102, 241) : Color.FromArgb(220, 167, 139, 250);
-                colorGrid = isLight ? Color.FromArgb(22, 99, 102, 241) : Color.FromArgb(28, 99, 102, 241);
+                // 404 / Missing: Soft Indigo + Violet
+                colorA = isLight ? Color.FromArgb(10, 99, 102, 241) : Color.FromArgb(16, 99, 102, 241);
+                colorB = isLight ? Color.FromArgb(6, 139, 92, 246) : Color.FromArgb(10, 124, 58, 237);
+                colorAccent = isLight ? Color.FromArgb(70, 99, 102, 241) : Color.FromArgb(90, 167, 139, 250);
+                colorGrid = isLight ? Color.FromArgb(8, 99, 102, 241) : Color.FromArgb(12, 99, 102, 241);
                 break;
 
             case FailureScenario.RateLimited:
             case FailureScenario.Timeout:
-                // Rate Limit / Timeout: Tangerine + Rose Red
-                colorA = isLight ? Color.FromArgb(26, 251, 146, 60) : Color.FromArgb(40, 251, 146, 60);
-                colorB = isLight ? Color.FromArgb(14, 244, 63, 94) : Color.FromArgb(28, 225, 29, 72);
-                colorAccent = isLight ? Color.FromArgb(160, 251, 146, 60) : Color.FromArgb(220, 253, 186, 116);
-                colorGrid = isLight ? Color.FromArgb(22, 251, 146, 60) : Color.FromArgb(28, 251, 146, 60);
+                // Rate Limit / Timeout: Soft Tangerine + Rose Red
+                colorA = isLight ? Color.FromArgb(10, 251, 146, 60) : Color.FromArgb(16, 251, 146, 60);
+                colorB = isLight ? Color.FromArgb(6, 244, 63, 94) : Color.FromArgb(10, 225, 29, 72);
+                colorAccent = isLight ? Color.FromArgb(70, 251, 146, 60) : Color.FromArgb(90, 253, 186, 116);
+                colorGrid = isLight ? Color.FromArgb(8, 251, 146, 60) : Color.FromArgb(12, 251, 146, 60);
                 break;
 
             case FailureScenario.DnsUnreachable:
-                // DNS / Network: Electric Cyan + Alert Crimson
-                colorA = isLight ? Color.FromArgb(26, 6, 182, 212) : Color.FromArgb(40, 6, 182, 212);
-                colorB = isLight ? Color.FromArgb(14, 239, 68, 68) : Color.FromArgb(28, 220, 38, 38);
-                colorAccent = isLight ? Color.FromArgb(160, 6, 182, 212) : Color.FromArgb(220, 103, 232, 249);
-                colorGrid = isLight ? Color.FromArgb(22, 6, 182, 212) : Color.FromArgb(28, 6, 182, 212);
+                // DNS / Network: Soft Cyan + Alert Tint
+                colorA = isLight ? Color.FromArgb(10, 6, 182, 212) : Color.FromArgb(16, 6, 182, 212);
+                colorB = isLight ? Color.FromArgb(6, 239, 68, 68) : Color.FromArgb(10, 220, 38, 38);
+                colorAccent = isLight ? Color.FromArgb(70, 6, 182, 212) : Color.FromArgb(90, 103, 232, 249);
+                colorGrid = isLight ? Color.FromArgb(8, 6, 182, 212) : Color.FromArgb(12, 6, 182, 212);
                 break;
 
             default:
-                // Generic / IO Error: Alert Crimson + Ruby
-                colorA = isLight ? Color.FromArgb(26, 239, 68, 68) : Color.FromArgb(40, 239, 68, 68);
-                colorB = isLight ? Color.FromArgb(14, 185, 28, 28) : Color.FromArgb(28, 153, 27, 27);
-                colorAccent = isLight ? Color.FromArgb(160, 239, 68, 68) : Color.FromArgb(220, 248, 113, 113);
-                colorGrid = isLight ? Color.FromArgb(22, 239, 68, 68) : Color.FromArgb(28, 239, 68, 68);
+                // Generic / IO Error: Soft Crimson + Ruby
+                colorA = isLight ? Color.FromArgb(10, 239, 68, 68) : Color.FromArgb(16, 239, 68, 68);
+                colorB = isLight ? Color.FromArgb(6, 185, 28, 28) : Color.FromArgb(10, 153, 27, 27);
+                colorAccent = isLight ? Color.FromArgb(70, 239, 68, 68) : Color.FromArgb(90, 248, 113, 113);
+                colorGrid = isLight ? Color.FromArgb(8, 239, 68, 68) : Color.FromArgb(12, 239, 68, 68);
                 break;
         }
 
-        // 1. Smooth atmospheric scenario ambient background
+        // 1. Soft atmospheric scenario ambient background
         var bgBrush = new LinearGradientBrush
         {
             StartPoint = new RelativePoint(0, 0, RelativeUnit.Relative),
@@ -647,64 +647,64 @@ public class BlockProgressBackground : Control
         };
         context.FillRectangle(bgBrush, bounds, 6);
 
-        // 2. Abstract isometric diagonal cyber-grid waves
-        var gridPen = new Pen(new SolidColorBrush(colorGrid), 0.75);
-        double spacing = 18.0;
+        // 2. Subtle delicate diagonal cyber-grid waves
+        var gridPen = new Pen(new SolidColorBrush(colorGrid), 0.5);
+        double spacing = 20.0;
         for (double x = -bounds.Height; x < bounds.Width + bounds.Height; x += spacing)
         {
             context.DrawLine(gridPen, new Point(x, bounds.Height), new Point(x + bounds.Height * 0.75, 0));
         }
 
-        // 3. Flowing dynamic animated sinusoidal wave ribbons
-        double wavePhase = _animPhase * 0.7;
+        // 3. Flowing soft animated sinusoidal wave ribbons
+        double wavePhase = _animPhase * 0.5;
         var waveGeometry = new StreamGeometry();
         using (var ctx = waveGeometry.Open())
         {
             ctx.BeginFigure(new Point(0, bounds.Height * 0.75), false);
-            for (double wx = 0; wx <= bounds.Width; wx += 20)
+            for (double wx = 0; wx <= bounds.Width; wx += 24)
             {
-                double wy = bounds.Height * 0.72 + Math.Sin((wx / bounds.Width) * Math.PI * 3.0 + wavePhase) * (bounds.Height * 0.22);
+                double wy = bounds.Height * 0.72 + Math.Sin((wx / bounds.Width) * Math.PI * 3.0 + wavePhase) * (bounds.Height * 0.18);
                 ctx.LineTo(new Point(wx, wy));
             }
         }
-        var wavePen = new Pen(new SolidColorBrush(Color.FromArgb((byte)(isLight ? 45 : 70), colorAccent.R, colorAccent.G, colorAccent.B)), 1.25);
+        var wavePen = new Pen(new SolidColorBrush(Color.FromArgb((byte)(isLight ? 22 : 36), colorAccent.R, colorAccent.G, colorAccent.B)), 0.9);
         context.DrawGeometry(null, wavePen, waveGeometry);
 
         var waveGeometry2 = new StreamGeometry();
         using (var ctx2 = waveGeometry2.Open())
         {
             ctx2.BeginFigure(new Point(0, bounds.Height * 0.38), false);
-            for (double wx = 0; wx <= bounds.Width; wx += 20)
+            for (double wx = 0; wx <= bounds.Width; wx += 24)
             {
-                double wy = bounds.Height * 0.38 + Math.Cos((wx / bounds.Width) * Math.PI * 2.5 + wavePhase * 1.3) * (bounds.Height * 0.26);
+                double wy = bounds.Height * 0.38 + Math.Cos((wx / bounds.Width) * Math.PI * 2.5 + wavePhase * 1.2) * (bounds.Height * 0.20);
                 ctx2.LineTo(new Point(wx, wy));
             }
         }
-        var wavePen2 = new Pen(new SolidColorBrush(Color.FromArgb((byte)(isLight ? 35 : 55), colorB.R, colorB.G, colorB.B)), 1.0);
+        var wavePen2 = new Pen(new SolidColorBrush(Color.FromArgb((byte)(isLight ? 16 : 26), colorB.R, colorB.G, colorB.B)), 0.75);
         context.DrawGeometry(null, wavePen2, waveGeometry2);
 
-        // 4. Subtle floating geometric diamond particle nodes
-        int particleCount = Math.Max(3, (int)(bounds.Width / 90));
-        var particleBrush = new SolidColorBrush(Color.FromArgb((byte)(isLight ? 50 : 75), colorAccent.R, colorAccent.G, colorAccent.B));
+        // 4. Delicate floating diamond particle nodes
+        int particleCount = Math.Max(2, (int)(bounds.Width / 110));
+        var particleBrush = new SolidColorBrush(Color.FromArgb((byte)(isLight ? 25 : 40), colorAccent.R, colorAccent.G, colorAccent.B));
         for (int i = 0; i < particleCount; i++)
         {
-            double px = 30 + i * (bounds.Width / particleCount) + Math.Sin(i * 1.7 + wavePhase) * 12;
-            double py = bounds.Height * 0.45 + Math.Cos(i * 2.1 + wavePhase * 0.8) * (bounds.Height * 0.25);
+            double px = 35 + i * (bounds.Width / particleCount) + Math.Sin(i * 1.7 + wavePhase) * 10;
+            double py = bounds.Height * 0.45 + Math.Cos(i * 2.1 + wavePhase * 0.8) * (bounds.Height * 0.20);
             
             var pGeom = new StreamGeometry();
             using (var pctx = pGeom.Open())
             {
-                pctx.BeginFigure(new Point(px, py - 3.5), true);
-                pctx.LineTo(new Point(px + 3.5, py));
-                pctx.LineTo(new Point(px, py + 3.5));
-                pctx.LineTo(new Point(px - 3.5, py));
+                pctx.BeginFigure(new Point(px, py - 2.5), true);
+                pctx.LineTo(new Point(px + 2.5, py));
+                pctx.LineTo(new Point(px, py + 2.5));
+                pctx.LineTo(new Point(px - 2.5, py));
             }
             context.DrawGeometry(particleBrush, null, pGeom);
         }
 
-        // 5. Draw Scenario-Specific Background Symbol Watermark (Positioned behind the right quadrant)
+        // 5. Draw Scenario-Specific Background Symbol Watermark (Positioned behind right quadrant)
         Point symbolCenter = new Point(Math.Max(120, bounds.Width - 85), bounds.Height * 0.48);
-        double symbolScale = Math.Clamp(bounds.Height / 62.0, 0.75, 1.05);
+        double symbolScale = Math.Clamp(bounds.Height / 64.0, 0.70, 0.95);
 
         switch (scenario)
         {
@@ -729,31 +729,31 @@ public class BlockProgressBackground : Control
                 break;
         }
 
-        // 6. Subtle glowing bottom hazard ribbon bar
+        // 6. Subtle delicate glowing bottom accent line
         var hazardBrush = new LinearGradientBrush
         {
             StartPoint = new RelativePoint(0, 0, RelativeUnit.Relative),
             EndPoint = new RelativePoint(1, 0, RelativeUnit.Relative),
             GradientStops = new GradientStops
             {
-                new GradientStop(Color.FromArgb((byte)(isLight ? 120 : 180), colorAccent.R, colorAccent.G, colorAccent.B), 0.0),
-                new GradientStop(Color.FromArgb((byte)(isLight ? 90 : 140), colorB.R, colorB.G, colorB.B), 0.5),
-                new GradientStop(Color.FromArgb((byte)(isLight ? 120 : 180), colorAccent.R, colorAccent.G, colorAccent.B), 1.0)
+                new GradientStop(Color.FromArgb((byte)(isLight ? 45 : 70), colorAccent.R, colorAccent.G, colorAccent.B), 0.0),
+                new GradientStop(Color.FromArgb((byte)(isLight ? 30 : 50), colorB.R, colorB.G, colorB.B), 0.5),
+                new GradientStop(Color.FromArgb((byte)(isLight ? 45 : 70), colorAccent.R, colorAccent.G, colorAccent.B), 1.0)
             }
         };
-        context.FillRectangle(hazardBrush, new Rect(0, bounds.Height - 2.5, bounds.Width, 2.5));
+        context.FillRectangle(hazardBrush, new Rect(0, bounds.Height - 1.5, bounds.Width, 1.5));
     }
 
     private static void DrawCloudflareShieldSymbol(DrawingContext context, Point center, double scale, double animPhase, bool isLight)
     {
-        // 1. Animated expanding defense sonar radar rings
-        double ringPulse = (animPhase * 0.35) % 1.0;
+        // 1. Soft expanding defense sonar radar rings
+        double ringPulse = (animPhase * 0.3) % 1.0;
         for (int r = 0; r < 2; r++)
         {
             double phaseOffset = (ringPulse + r * 0.5) % 1.0;
-            double radius = 16.0 * scale + phaseOffset * 34.0 * scale;
-            byte alpha = (byte)(Math.Max(0, (1.0 - phaseOffset) * (isLight ? 60 : 90)));
-            var ringPen = new Pen(new SolidColorBrush(Color.FromArgb(alpha, 244, 129, 32)), 1.0 * scale);
+            double radius = 14.0 * scale + phaseOffset * 30.0 * scale;
+            byte alpha = (byte)(Math.Max(0, (1.0 - phaseOffset) * (isLight ? 20 : 35)));
+            var ringPen = new Pen(new SolidColorBrush(Color.FromArgb(alpha, 244, 129, 32)), 0.75 * scale);
             context.DrawEllipse(null, ringPen, center, radius, radius * 0.72);
         }
 
@@ -772,10 +772,10 @@ public class BlockProgressBackground : Control
             ctx.LineTo(new Point(ox - 30 * scale, oy + 8 * scale));
         }
 
-        byte cloudFillAlpha = (byte)(isLight ? 25 : 35);
-        byte cloudStrokeAlpha = (byte)(isLight ? 100 : 160);
+        byte cloudFillAlpha = (byte)(isLight ? 10 : 16);
+        byte cloudStrokeAlpha = (byte)(isLight ? 40 : 65);
         var cloudFill = new SolidColorBrush(Color.FromArgb(cloudFillAlpha, 244, 129, 32));
-        var cloudPen = new Pen(new SolidColorBrush(Color.FromArgb(cloudStrokeAlpha, 244, 129, 32)), 1.35 * scale);
+        var cloudPen = new Pen(new SolidColorBrush(Color.FromArgb(cloudStrokeAlpha, 244, 129, 32)), 0.95 * scale);
         context.DrawGeometry(cloudFill, cloudPen, cloudGeom);
 
         // 3. Central Defense Shield geometry
@@ -784,8 +784,8 @@ public class BlockProgressBackground : Control
         {
             double sx = center.X;
             double sy = center.Y - 2 * scale;
-            double sw = 14 * scale;
-            double sh = 18 * scale;
+            double sw = 13 * scale;
+            double sh = 17 * scale;
 
             sctx.BeginFigure(new Point(sx, sy - sh * 0.5), true);
             sctx.LineTo(new Point(sx + sw, sy - sh * 0.35));
@@ -796,10 +796,10 @@ public class BlockProgressBackground : Control
             sctx.LineTo(new Point(sx, sy - sh * 0.5));
         }
 
-        byte shieldFillAlpha = (byte)(isLight ? 60 : 95);
-        byte shieldStrokeAlpha = (byte)(isLight ? 190 : 255);
+        byte shieldFillAlpha = (byte)(isLight ? 20 : 35);
+        byte shieldStrokeAlpha = (byte)(isLight ? 60 : 95);
         var shieldFill = new SolidColorBrush(Color.FromArgb(shieldFillAlpha, 239, 68, 68));
-        var shieldPen = new Pen(new SolidColorBrush(Color.FromArgb(shieldStrokeAlpha, 245, 158, 11)), 1.5 * scale);
+        var shieldPen = new Pen(new SolidColorBrush(Color.FromArgb(shieldStrokeAlpha, 245, 158, 11)), 1.1 * scale);
         context.DrawGeometry(shieldFill, shieldPen, shieldGeom);
 
         // 4. Central Shield Key checkmark
@@ -808,125 +808,113 @@ public class BlockProgressBackground : Control
         {
             double cx = center.X;
             double cy = center.Y - 1 * scale;
-            cctx.BeginFigure(new Point(cx - 5 * scale, cy), false);
-            cctx.LineTo(new Point(cx - 1 * scale, cy + 4 * scale));
-            cctx.LineTo(new Point(cx + 6 * scale, cy - 3 * scale));
+            cctx.BeginFigure(new Point(cx - 4.5 * scale, cy), false);
+            cctx.LineTo(new Point(cx - 1 * scale, cy + 3.5 * scale));
+            cctx.LineTo(new Point(cx + 5.5 * scale, cy - 2.5 * scale));
         }
-        var checkPen = new Pen(new SolidColorBrush(isLight ? Color.FromRgb(255, 255, 255) : Color.FromRgb(255, 255, 255)), 2.0 * scale);
+        var checkPen = new Pen(new SolidColorBrush(Color.FromArgb((byte)(isLight ? 75 : 120), 255, 255, 255)), 1.3 * scale);
         context.DrawGeometry(null, checkPen, checkGeom);
     }
 
     private static void DrawAuthLockSymbol(DrawingContext context, Point center, double scale, double animPhase, bool isLight)
     {
-        // Rotating cybernetic lock dial
-        double angle = animPhase * 0.6;
+        double angle = animPhase * 0.5;
         for (int i = 0; i < 6; i++)
         {
             double a = angle + (i * Math.PI / 3.0);
-            double r1 = 20 * scale;
-            double r2 = 25 * scale;
-            var dialPen = new Pen(new SolidColorBrush(Color.FromArgb((byte)(isLight ? 40 : 70), 245, 158, 11)), 1.2 * scale);
+            double r1 = 18 * scale;
+            double r2 = 22 * scale;
+            var dialPen = new Pen(new SolidColorBrush(Color.FromArgb((byte)(isLight ? 16 : 28), 245, 158, 11)), 0.8 * scale);
             context.DrawLine(dialPen, new Point(center.X + Math.Cos(a) * r1, center.Y + Math.Sin(a) * r1),
                                       new Point(center.X + Math.Cos(a) * r2, center.Y + Math.Sin(a) * r2));
         }
 
-        // Padlock body
         var lockGeom = new StreamGeometry();
         using (var ctx = lockGeom.Open())
         {
             double lx = center.X;
             double ly = center.Y + 2 * scale;
-            ctx.BeginFigure(new Point(lx - 12 * scale, ly - 6 * scale), true);
-            ctx.LineTo(new Point(lx + 12 * scale, ly - 6 * scale));
-            ctx.LineTo(new Point(lx + 12 * scale, ly + 14 * scale));
-            ctx.LineTo(new Point(lx - 12 * scale, ly + 14 * scale));
+            ctx.BeginFigure(new Point(lx - 11 * scale, ly - 5 * scale), true);
+            ctx.LineTo(new Point(lx + 11 * scale, ly - 5 * scale));
+            ctx.LineTo(new Point(lx + 11 * scale, ly + 13 * scale));
+            ctx.LineTo(new Point(lx - 11 * scale, ly + 13 * scale));
         }
-        var lockFill = new SolidColorBrush(Color.FromArgb((byte)(isLight ? 45 : 75), 245, 158, 11));
-        var lockPen = new Pen(new SolidColorBrush(Color.FromArgb((byte)(isLight ? 160 : 230), 245, 158, 11)), 1.5 * scale);
+        var lockFill = new SolidColorBrush(Color.FromArgb((byte)(isLight ? 18 : 30), 245, 158, 11));
+        var lockPen = new Pen(new SolidColorBrush(Color.FromArgb((byte)(isLight ? 55 : 85), 245, 158, 11)), 1.1 * scale);
         context.DrawGeometry(lockFill, lockPen, lockGeom);
 
-        // Padlock shackle
         var shackleGeom = new StreamGeometry();
         using (var sctx = shackleGeom.Open())
         {
             double lx = center.X;
-            double ly = center.Y - 6 * scale;
-            sctx.BeginFigure(new Point(lx - 7 * scale, ly), false);
-            sctx.ArcTo(new Point(lx + 7 * scale, ly), new Size(7 * scale, 9 * scale), 0, false, SweepDirection.Clockwise);
+            double ly = center.Y - 5 * scale;
+            sctx.BeginFigure(new Point(lx - 6 * scale, ly), false);
+            sctx.ArcTo(new Point(lx + 6 * scale, ly), new Size(6 * scale, 8 * scale), 0, false, SweepDirection.Clockwise);
         }
-        var shacklePen = new Pen(new SolidColorBrush(Color.FromArgb((byte)(isLight ? 180 : 255), 251, 191, 36)), 2.0 * scale);
+        var shacklePen = new Pen(new SolidColorBrush(Color.FromArgb((byte)(isLight ? 60 : 95), 251, 191, 36)), 1.3 * scale);
         context.DrawGeometry(null, shacklePen, shackleGeom);
     }
 
     private static void DrawNotFoundSymbol(DrawingContext context, Point center, double scale, double animPhase, bool isLight)
     {
-        // Magnifying glass lens
-        var lensPen = new Pen(new SolidColorBrush(Color.FromArgb((byte)(isLight ? 140 : 210), 99, 102, 241)), 2.0 * scale);
-        var lensFill = new SolidColorBrush(Color.FromArgb((byte)(isLight ? 30 : 50), 99, 102, 241));
+        var lensPen = new Pen(new SolidColorBrush(Color.FromArgb((byte)(isLight ? 50 : 80), 99, 102, 241)), 1.3 * scale);
+        var lensFill = new SolidColorBrush(Color.FromArgb((byte)(isLight ? 12 : 22), 99, 102, 241));
         Point lensCenter = new Point(center.X - 4 * scale, center.Y - 4 * scale);
-        context.DrawEllipse(lensFill, lensPen, lensCenter, 14 * scale, 14 * scale);
+        context.DrawEllipse(lensFill, lensPen, lensCenter, 13 * scale, 13 * scale);
 
-        // Handle
-        var handlePen = new Pen(new SolidColorBrush(Color.FromArgb((byte)(isLight ? 160 : 230), 139, 92, 246)), 2.5 * scale);
-        context.DrawLine(handlePen, new Point(lensCenter.X + 10 * scale, lensCenter.Y + 10 * scale),
-                                    new Point(lensCenter.X + 22 * scale, lensCenter.Y + 22 * scale));
+        var handlePen = new Pen(new SolidColorBrush(Color.FromArgb((byte)(isLight ? 60 : 90), 139, 92, 246)), 1.6 * scale);
+        context.DrawLine(handlePen, new Point(lensCenter.X + 9 * scale, lensCenter.Y + 9 * scale),
+                                    new Point(lensCenter.X + 20 * scale, lensCenter.Y + 20 * scale));
 
-        // Question / X in lens
-        var xPen = new Pen(new SolidColorBrush(Color.FromArgb((byte)(isLight ? 180 : 255), 239, 68, 68)), 1.5 * scale);
-        context.DrawLine(xPen, new Point(lensCenter.X - 5 * scale, lensCenter.Y - 5 * scale), new Point(lensCenter.X + 5 * scale, lensCenter.Y + 5 * scale));
-        context.DrawLine(xPen, new Point(lensCenter.X + 5 * scale, lensCenter.Y - 5 * scale), new Point(lensCenter.X - 5 * scale, lensCenter.Y + 5 * scale));
+        var xPen = new Pen(new SolidColorBrush(Color.FromArgb((byte)(isLight ? 65 : 100), 239, 68, 68)), 1.0 * scale);
+        context.DrawLine(xPen, new Point(lensCenter.X - 4 * scale, lensCenter.Y - 4 * scale), new Point(lensCenter.X + 4 * scale, lensCenter.Y + 4 * scale));
+        context.DrawLine(xPen, new Point(lensCenter.X + 4 * scale, lensCenter.Y - 4 * scale), new Point(lensCenter.X - 4 * scale, lensCenter.Y + 4 * scale));
     }
 
     private static void DrawTimeoutSymbol(DrawingContext context, Point center, double scale, double animPhase, bool isLight)
     {
-        // Stop-clock / Hourglass circle
-        var clockPen = new Pen(new SolidColorBrush(Color.FromArgb((byte)(isLight ? 140 : 210), 251, 146, 60)), 1.5 * scale);
-        var clockFill = new SolidColorBrush(Color.FromArgb((byte)(isLight ? 30 : 50), 251, 146, 60));
-        context.DrawEllipse(clockFill, clockPen, center, 16 * scale, 16 * scale);
+        var clockPen = new Pen(new SolidColorBrush(Color.FromArgb((byte)(isLight ? 50 : 80), 251, 146, 60)), 1.1 * scale);
+        var clockFill = new SolidColorBrush(Color.FromArgb((byte)(isLight ? 12 : 20), 251, 146, 60));
+        context.DrawEllipse(clockFill, clockPen, center, 15 * scale, 15 * scale);
 
-        // Clock hand rotating
-        double handAngle = animPhase * 1.5;
-        var handPen = new Pen(new SolidColorBrush(Color.FromArgb((byte)(isLight ? 180 : 255), 244, 63, 94)), 2.0 * scale);
-        context.DrawLine(handPen, center, new Point(center.X + Math.Cos(handAngle) * 11 * scale, center.Y + Math.Sin(handAngle) * 11 * scale));
-        context.DrawLine(handPen, center, new Point(center.X, center.Y - 9 * scale));
+        double handAngle = animPhase * 1.2;
+        var handPen = new Pen(new SolidColorBrush(Color.FromArgb((byte)(isLight ? 65 : 100), 244, 63, 94)), 1.3 * scale);
+        context.DrawLine(handPen, center, new Point(center.X + Math.Cos(handAngle) * 10 * scale, center.Y + Math.Sin(handAngle) * 10 * scale));
+        context.DrawLine(handPen, center, new Point(center.X, center.Y - 8 * scale));
     }
 
     private static void DrawDnsGlobeSymbol(DrawingContext context, Point center, double scale, double animPhase, bool isLight)
     {
-        // Globe wireframe
-        var globePen = new Pen(new SolidColorBrush(Color.FromArgb((byte)(isLight ? 140 : 210), 6, 182, 212)), 1.5 * scale);
-        var globeFill = new SolidColorBrush(Color.FromArgb((byte)(isLight ? 25 : 45), 6, 182, 212));
-        context.DrawEllipse(globeFill, globePen, center, 16 * scale, 16 * scale);
-        context.DrawEllipse(null, globePen, center, 7 * scale, 16 * scale);
-        context.DrawLine(globePen, new Point(center.X - 16 * scale, center.Y), new Point(center.X + 16 * scale, center.Y));
+        var globePen = new Pen(new SolidColorBrush(Color.FromArgb((byte)(isLight ? 50 : 80), 6, 182, 212)), 1.1 * scale);
+        var globeFill = new SolidColorBrush(Color.FromArgb((byte)(isLight ? 10 : 18), 6, 182, 212));
+        context.DrawEllipse(globeFill, globePen, center, 15 * scale, 15 * scale);
+        context.DrawEllipse(null, globePen, center, 6 * scale, 15 * scale);
+        context.DrawLine(globePen, new Point(center.X - 15 * scale, center.Y), new Point(center.X + 15 * scale, center.Y));
 
-        // Disconnected red signal pulses
-        double pulse = (animPhase * 0.4) % 1.0;
-        double radius = 18 * scale + pulse * 14 * scale;
-        byte alpha = (byte)(Math.Max(0, (1.0 - pulse) * (isLight ? 70 : 110)));
-        var sigPen = new Pen(new SolidColorBrush(Color.FromArgb(alpha, 239, 68, 68)), 1.2 * scale);
+        double pulse = (animPhase * 0.3) % 1.0;
+        double radius = 16 * scale + pulse * 12 * scale;
+        byte alpha = (byte)(Math.Max(0, (1.0 - pulse) * (isLight ? 25 : 45)));
+        var sigPen = new Pen(new SolidColorBrush(Color.FromArgb(alpha, 239, 68, 68)), 0.9 * scale);
         context.DrawEllipse(null, sigPen, center, radius, radius);
     }
 
     private static void DrawGenericHazardSymbol(DrawingContext context, Point center, double scale, double animPhase, bool isLight)
     {
-        // Hazard Triangle
         var triGeom = new StreamGeometry();
         using (var ctx = triGeom.Open())
         {
             double tx = center.X;
             double ty = center.Y - 2 * scale;
-            ctx.BeginFigure(new Point(tx, ty - 16 * scale), true);
-            ctx.LineTo(new Point(tx + 18 * scale, ty + 15 * scale));
-            ctx.LineTo(new Point(tx - 18 * scale, ty + 15 * scale));
+            ctx.BeginFigure(new Point(tx, ty - 15 * scale), true);
+            ctx.LineTo(new Point(tx + 16 * scale, ty + 14 * scale));
+            ctx.LineTo(new Point(tx - 16 * scale, ty + 14 * scale));
         }
-        var triFill = new SolidColorBrush(Color.FromArgb((byte)(isLight ? 35 : 60), 239, 68, 68));
-        var triPen = new Pen(new SolidColorBrush(Color.FromArgb((byte)(isLight ? 160 : 230), 239, 68, 68)), 1.8 * scale);
+        var triFill = new SolidColorBrush(Color.FromArgb((byte)(isLight ? 14 : 24), 239, 68, 68));
+        var triPen = new Pen(new SolidColorBrush(Color.FromArgb((byte)(isLight ? 55 : 90), 239, 68, 68)), 1.2 * scale);
         context.DrawGeometry(triFill, triPen, triGeom);
 
-        // Exclamation Mark
-        var markPen = new Pen(new SolidColorBrush(isLight ? Color.FromRgb(255, 255, 255) : Color.FromRgb(255, 255, 255)), 2.0 * scale);
-        context.DrawLine(markPen, new Point(center.X, center.Y - 7 * scale), new Point(center.X, center.Y + 4 * scale));
-        context.DrawEllipse(new SolidColorBrush(Color.FromRgb(255, 255, 255)), null, new Point(center.X, center.Y + 9 * scale), 1.2 * scale, 1.2 * scale);
+        var markPen = new Pen(new SolidColorBrush(Color.FromArgb((byte)(isLight ? 75 : 120), 255, 255, 255)), 1.3 * scale);
+        context.DrawLine(markPen, new Point(center.X, center.Y - 6 * scale), new Point(center.X, center.Y + 3 * scale));
+        context.DrawEllipse(new SolidColorBrush(Color.FromArgb((byte)(isLight ? 75 : 120), 255, 255, 255)), null, new Point(center.X, center.Y + 8 * scale), 1.0 * scale, 1.0 * scale);
     }
 }

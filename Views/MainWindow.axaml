@@ -377,16 +377,16 @@
                                                         </Border>
                                                         <!-- Failure Scenario Diagnostic Badge -->
                                                         <Border IsVisible="{Binding IsFailed}"
-                                                                Background="#28EF4444"
-                                                                BorderBrush="#70EF4444"
+                                                                Background="#14EF4444"
+                                                                BorderBrush="#35EF4444"
                                                                 BorderThickness="1"
                                                                 CornerRadius="4"
-                                                                Padding="6,2"
+                                                                Padding="5,1"
                                                                 Margin="4,0,0,0"
                                                                 ToolTip.Tip="{Binding ErrorMessage}">
                                                             <StackPanel Orientation="Horizontal" Spacing="4">
                                                                 <TextBlock Text="{Binding ScenarioDiagnosticIcon}" FontSize="10" VerticalAlignment="Center" />
-                                                                <TextBlock Text="{Binding ScenarioDiagnosticText}" FontSize="10" FontWeight="SemiBold" Foreground="#EF4444" VerticalAlignment="Center" />
+                                                                <TextBlock Text="{Binding ScenarioDiagnosticText}" FontSize="10" FontWeight="Medium" Foreground="#D0EF4444" VerticalAlignment="Center" />
                                                             </StackPanel>
                                                         </Border>
                                                     </StackPanel>
