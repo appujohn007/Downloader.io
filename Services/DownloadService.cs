@@ -36,14 +36,22 @@ public class DownloadService : IDownloadService
     private readonly ISettingsService _settingsService;
     private readonly IAudioNotificationService _audioNotificationService;
 
+    private static readonly System.Net.CookieContainer CookieJar = new();
+
     private static readonly HttpClient HttpClient = new(new SocketsHttpHandler
     {
         AllowAutoRedirect = true,
         MaxAutomaticRedirections = 10,
-        PooledConnectionLifetime = TimeSpan.FromMinutes(5)
+        PooledConnectionLifetime = TimeSpan.FromMinutes(10),
+        CookieContainer = CookieJar,
+        UseCookies = true,
+        AutomaticDecompression = System.Net.DecompressionMethods.All,
+        EnableMultipleHttp2Connections = true
     })
     {
-        Timeout = TimeSpan.FromHours(24)
+        Timeout = TimeSpan.FromHours(24),
+        DefaultRequestVersion = System.Net.HttpVersion.Version20,
+        DefaultVersionPolicy = HttpVersionPolicy.RequestVersionOrLower
     };
 
     private static readonly Dictionary<string, string> MimeExtensions = new(StringComparer.OrdinalIgnoreCase)
@@ -383,6 +391,36 @@ public class DownloadService : IDownloadService
             SaveSegmentsMeta(item, item.Segments.ToList());
             UpdateUi(item);
             Logger.Warn($"[PAUSED/CANCELLED] Download '{item.FileName}' interrupted by user.");
+        }
+        catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.Forbidden || ex.Message.Contains("403"))
+        {
+            item.Status = DownloadStatus.Failed;
+            item.ErrorMessage = "HTTP 403 Forbidden (Cloudflare bot challenge or access denied by host)";
+            item.SpeedBytesPerSec = 0;
+            SaveSegmentsMeta(item, item.Segments.ToList());
+            UpdateUi(item);
+            _audioNotificationService.PlayDownloadFailed();
+            Logger.Warn($"[FAILED] Download '{item.FileName}' returned HTTP 403 (Cloudflare Challenge or Access Denied).");
+        }
+        catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.Unauthorized || ex.Message.Contains("401"))
+        {
+            item.Status = DownloadStatus.Failed;
+            item.ErrorMessage = "HTTP 401 Unauthorized (Authentication/Login required)";
+            item.SpeedBytesPerSec = 0;
+            SaveSegmentsMeta(item, item.Segments.ToList());
+            UpdateUi(item);
+            _audioNotificationService.PlayDownloadFailed();
+            Logger.Warn($"[FAILED] Download '{item.FileName}' returned HTTP 401 Unauthorized.");
+        }
+        catch (HttpRequestException ex) when (ex.StatusCode == (System.Net.HttpStatusCode)429 || ex.Message.Contains("429"))
+        {
+            item.Status = DownloadStatus.Failed;
+            item.ErrorMessage = "HTTP 429 Too Many Requests (Rate limit reached, retry shortly)";
+            item.SpeedBytesPerSec = 0;
+            SaveSegmentsMeta(item, item.Segments.ToList());
+            UpdateUi(item);
+            _audioNotificationService.PlayDownloadFailed();
+            Logger.Warn($"[FAILED] Download '{item.FileName}' returned HTTP 429 Rate Limited.");
         }
         catch (Exception ex)
         {
