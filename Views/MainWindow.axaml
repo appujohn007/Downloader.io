@@ -723,6 +723,26 @@
                         </ComboBox>
                     </StackPanel>
 
+                    <!-- Browser Emulation & User-Agent Profile -->
+                    <StackPanel Spacing="4">
+                        <TextBlock Text="Browser Emulation &amp; User-Agent Profile:" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" />
+                        <ComboBox SelectedIndex="{Binding SelectedUserAgentPresetIndex}" FontSize="11" HorizontalAlignment="Stretch">
+                            <ComboBoxItem Content="🌐 Google Chrome 128 (Windows 11) [Recommended]" />
+                            <ComboBoxItem Content="🦊 Mozilla Firefox 130 (Windows 11)" />
+                            <ComboBoxItem Content="🌊 Microsoft Edge 128 (Windows 11)" />
+                            <ComboBoxItem Content="🍎 Apple Safari 17.5 (macOS)" />
+                            <ComboBoxItem Content="📱 Google Chrome Mobile (Android 14)" />
+                            <ComboBoxItem Content="⚡ Downloader.io Native Engine 2.0" />
+                            <ComboBoxItem Content="⚙️ Custom User-Agent String..." />
+                        </ComboBox>
+                        <TextBox Classes="minimal-input"
+                                 Text="{Binding CustomUserAgent}"
+                                 Watermark="Enter custom User-Agent string (e.g. Mozilla/5.0...)"
+                                 FontSize="11"
+                                 Margin="0,4,0,0"
+                                 IsVisible="{Binding IsCustomUserAgent}" />
+                    </StackPanel>
+
                     <!-- Save Actions -->
                     <Grid ColumnDefinitions="*, Auto, Auto" Margin="0,6,0,0">
                         <Button Grid.Column="1" Classes="ghost-btn" Command="{Binding ToggleSettingsCommand}" Content="Cancel" Margin="0,0,6,0" />

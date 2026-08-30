@@ -85,6 +85,51 @@ public class DownloadService : IDownloadService
         _audioNotificationService = audioNotificationService ?? new AudioNotificationService(_settingsService);
     }
 
+    public HttpRequestMessage CreateBrowserRequest(HttpMethod method, string url, string? customReferer = null)
+    {
+        var request = new HttpRequestMessage(method, url);
+        var settings = _settingsService.CurrentSettings;
+        var userAgent = settings.GetEffectiveUserAgent();
+
+        // 1. Realistic User Agent Profile
+        request.Headers.UserAgent.Clear();
+        request.Headers.UserAgent.ParseAdd(userAgent);
+
+        // 2. Realistic Browser Accept Header
+        request.Headers.Accept.Clear();
+        request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("text/html"));
+        request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/xhtml+xml"));
+        request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/xml", 0.9));
+        request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("image/avif"));
+        request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("image/webp"));
+        request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("image/apng"));
+        request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("*/*", 0.8));
+
+        // 3. Language & Encoding
+        request.Headers.AcceptLanguage.Clear();
+        request.Headers.AcceptLanguage.Add(new StringWithQualityHeaderValue("en-US"));
+        request.Headers.AcceptLanguage.Add(new StringWithQualityHeaderValue("en", 0.9));
+
+        // 4. Same-Origin or Dynamic Referer Header to prevent anti-hotlinking redirects
+        if (Uri.TryCreate(url, UriKind.Absolute, out var uri))
+        {
+            var origin = customReferer ?? $"{uri.Scheme}://{uri.Authority}/";
+            request.Headers.Referrer = new Uri(origin);
+        }
+
+        // 5. Chromium Sec-CH and Sec-Fetch Emulation Headers
+        request.Headers.TryAddWithoutValidation("Sec-Ch-Ua", "\"Chromium\";v=\"128\", \"Not;A=Brand\";v=\"24\", \"Google Chrome\";v=\"128\"");
+        request.Headers.TryAddWithoutValidation("Sec-Ch-Ua-Mobile", "?0");
+        request.Headers.TryAddWithoutValidation("Sec-Ch-Ua-Platform", "\"Windows\"");
+        request.Headers.TryAddWithoutValidation("Sec-Fetch-Dest", "document");
+        request.Headers.TryAddWithoutValidation("Sec-Fetch-Mode", "navigate");
+        request.Headers.TryAddWithoutValidation("Sec-Fetch-Site", "same-origin");
+        request.Headers.TryAddWithoutValidation("Sec-Fetch-User", "?1");
+        request.Headers.TryAddWithoutValidation("Upgrade-Insecure-Requests", "1");
+
+        return request;
+    }
+
     public async Task<FileMetadata> ProbeMetadataAsync(string url, CancellationToken ct = default)
     {
         var meta = new FileMetadata { Url = url };
@@ -102,10 +147,10 @@ public class DownloadService : IDownloadService
 
             HttpResponseMessage? response = null;
 
-            // 1. Try HEAD request first
+            // 1. Try HEAD request first with full browser emulation
             try
             {
-                using var headReq = new HttpRequestMessage(HttpMethod.Head, url);
+                using var headReq = CreateBrowserRequest(HttpMethod.Head, url);
                 response = await HttpClient.SendAsync(headReq, HttpCompletionOption.ResponseHeadersRead, ct);
             }
             catch (Exception ex)
@@ -113,11 +158,11 @@ public class DownloadService : IDownloadService
                 Logger.Debug($"HEAD request failed ({ex.Message}), falling back to GET Range request...");
             }
 
-            // 2. Fallback to GET with Range: bytes=0-0
+            // 2. Fallback to GET with Range: bytes=0-0 with full browser emulation
             if (response == null || !response.IsSuccessStatusCode)
             {
                 response?.Dispose();
-                using var getReq = new HttpRequestMessage(HttpMethod.Get, url);
+                using var getReq = CreateBrowserRequest(HttpMethod.Get, url);
                 getReq.Headers.Range = new RangeHeaderValue(0, 0);
                 response = await HttpClient.SendAsync(getReq, HttpCompletionOption.ResponseHeadersRead, ct);
             }
@@ -466,7 +511,7 @@ public class DownloadService : IDownloadService
                             seg.IsActive = true;
                             seg.IsCompleted = false;
 
-                            using var request = new HttpRequestMessage(HttpMethod.Get, item.Url);
+                            using var request = CreateBrowserRequest(HttpMethod.Get, item.Url);
                             request.Headers.Range = new RangeHeaderValue(currentOffset, seg.EndByte);
 
                             using var response = await HttpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, ct);
@@ -679,7 +724,7 @@ public class DownloadService : IDownloadService
             existingBytes = new FileInfo(partialFilePath).Length;
         }
 
-        using var request = new HttpRequestMessage(HttpMethod.Get, item.Url);
+        using var request = CreateBrowserRequest(HttpMethod.Get, item.Url);
         if (existingBytes > 0)
         {
             request.Headers.Range = new RangeHeaderValue(existingBytes, null);
@@ -694,7 +739,7 @@ public class DownloadService : IDownloadService
             {
                 existingBytes = 0;
                 if (File.Exists(partialFilePath)) File.Delete(partialFilePath);
-                using var freshRequest = new HttpRequestMessage(HttpMethod.Get, item.Url);
+                using var freshRequest = CreateBrowserRequest(HttpMethod.Get, item.Url);
                 using var freshResponse = await HttpClient.SendAsync(freshRequest, HttpCompletionOption.ResponseHeadersRead, ct);
                 freshResponse.EnsureSuccessStatusCode();
                 await ReadSingleStreamAsync(item, freshResponse, partialFilePath, finalFilePath, 0, ct);

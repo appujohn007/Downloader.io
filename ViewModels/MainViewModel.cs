@@ -219,6 +219,19 @@ public partial class MainViewModel : ViewModelBase
         set => SelectedPostDownloadActionIndex = (int)value;
     }
 
+    [ObservableProperty]
+    private int _selectedUserAgentPresetIndex = 0;
+
+    [ObservableProperty]
+    private string _customUserAgent = string.Empty;
+
+    public bool IsCustomUserAgent => SelectedUserAgentPresetIndex == 6;
+
+    partial void OnSelectedUserAgentPresetIndexChanged(int value)
+    {
+        OnPropertyChanged(nameof(IsCustomUserAgent));
+    }
+
     // Floating Mini Widget
     private MiniDropWindow? _miniWindow;
     [ObservableProperty]
@@ -264,6 +277,8 @@ public partial class MainViewModel : ViewModelBase
         DefaultDownloadDirectory = _settings.DefaultDownloadDirectory;
         DefaultThreadsPerDownload = _settings.DefaultThreadsPerDownload;
         SelectedPostDownloadAction = _settings.PostDownloadAction;
+        SelectedUserAgentPresetIndex = _settings.UserAgentPresetIndex;
+        CustomUserAgent = _settings.CustomUserAgent;
 
         if (Application.Current != null)
         {
@@ -803,6 +818,8 @@ public partial class MainViewModel : ViewModelBase
         _settings.DefaultDownloadDirectory = DefaultDownloadDirectory;
         _settings.DefaultThreadsPerDownload = DefaultThreadsPerDownload;
         _settings.PostDownloadAction = SelectedPostDownloadAction;
+        _settings.UserAgentPresetIndex = SelectedUserAgentPresetIndex;
+        _settings.CustomUserAgent = CustomUserAgent;
 
         _settingsService.SaveSettings(_settings);
 
