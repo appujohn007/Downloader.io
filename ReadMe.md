@@ -54,7 +54,7 @@ Under the hood, it features an asynchronous multi-stream byte-range slicing engi
 
 ---
 
-## 📊 Comparison
+##  Comparison
 
 | Feature | Downloader.io ⚡ | Legacy Download Managers | Typical Browser |
 | :--- | :---: | :---: | :---: |
