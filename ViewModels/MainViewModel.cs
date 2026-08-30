@@ -141,7 +141,13 @@ public partial class MainViewModel : ViewModelBase
     private int _defaultThreadsPerDownload = 8;
 
     [ObservableProperty]
-    private PostDownloadAction _selectedPostDownloadAction = PostDownloadAction.None;
+    private int _selectedPostDownloadActionIndex = 0;
+
+    public PostDownloadAction SelectedPostDownloadAction
+    {
+        get => (PostDownloadAction)SelectedPostDownloadActionIndex;
+        set => SelectedPostDownloadActionIndex = (int)value;
+    }
 
     // Floating Mini Widget
     private MiniDropWindow? _miniWindow;

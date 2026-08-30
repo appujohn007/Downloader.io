@@ -617,7 +617,7 @@
                     <!-- Power Actions -->
                     <StackPanel Spacing="4">
                         <TextBlock Text="Post-Download Power Management (When all downloads finish):" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" />
-                        <ComboBox SelectedItem="{Binding SelectedPostDownloadAction}" SelectedIndex="0" FontSize="11" HorizontalAlignment="Stretch">
+                        <ComboBox SelectedIndex="{Binding SelectedPostDownloadActionIndex}" FontSize="11" HorizontalAlignment="Stretch">
                             <ComboBoxItem Content="None (Stay On)" />
                             <ComboBoxItem Content="Shut Down PC" />
                             <ComboBoxItem Content="Sleep Mode" />
