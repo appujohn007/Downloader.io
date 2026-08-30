@@ -25,10 +25,35 @@ if exist "%LocalAppData%\Microsoft\dotnet\dotnet.exe" (
     )
 )
 
-echo Starting Downloader.io with: %DOTNET_CMD%
+:: Target executable paths
+set "TARGET_EXE=%~dp0bin\Debug\net8.0\DownloaderApp.exe"
+set "TARGET_DLL=%~dp0bin\Debug\net8.0\DownloaderApp.dll"
+
+:: Rebuild only if binary does not exist or user explicitly asked for --build / -b
+if "%1"=="--build" goto do_build
+if "%1"=="-b" goto do_build
+if not exist "%TARGET_DLL%" goto do_build
+goto do_run
+
+:do_build
+echo [BUILD] Building Downloader.io...
+"%DOTNET_CMD%" build "%~dp0Downloader.csproj" -v q
+if %errorlevel% neq 0 (
+    echo.
+    echo [ERROR] Build failed.
+    pause
+    exit /b 1
+)
+
+:do_run
+echo [LAUNCH] Launching Downloader.io...
 echo.
 
-"%DOTNET_CMD%" run --project "%~dp0Downloader.csproj"
+if exist "%TARGET_EXE%" (
+    "%TARGET_EXE%"
+) else (
+    "%DOTNET_CMD%" "%TARGET_DLL%"
+)
 
 if %errorlevel% neq 0 (
     echo.
