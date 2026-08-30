@@ -256,10 +256,10 @@ public partial class DownloadItem : ObservableObject
         var ext = Path.GetExtension(fileName).ToLowerInvariant();
         return ext switch
         {
-            ".zip" or ".rar" or ".7z" or ".tar" or ".gz" or ".bz2" or ".iso" or ".img" => DownloadCategory.Compressed,
-            ".exe" or ".msi" or ".bat" or ".cmd" or ".ps1" or ".apk" or ".dmg" or ".pkg" or ".deb" or ".rpm" or ".whl" => DownloadCategory.Programs,
-            ".mp4" or ".mkv" or ".avi" or ".mov" or ".webm" or ".mp3" or ".flac" or ".wav" or ".aac" or ".jpg" or ".jpeg" or ".png" or ".gif" or ".webp" or ".svg" => DownloadCategory.Media,
-            ".pdf" or ".doc" or ".docx" or ".xls" or ".xlsx" or ".ppt" or ".pptx" or ".txt" or ".md" or ".csv" or ".json" or ".xml" or ".epub" => DownloadCategory.Documents,
+            ".zip" or ".rar" or ".7z" or ".tar" or ".gz" or ".bz2" or ".xz" or ".iso" or ".img" or ".dmg" or ".vhd" => DownloadCategory.Compressed,
+            ".exe" or ".msi" or ".bat" or ".cmd" or ".ps1" or ".apk" or ".pkg" or ".deb" or ".rpm" or ".whl" or ".jar" or ".sh" => DownloadCategory.Programs,
+            ".mp4" or ".mkv" or ".avi" or ".mov" or ".webm" or ".wmv" or ".flv" or ".mp3" or ".flac" or ".wav" or ".aac" or ".m4a" or ".ogg" or ".jpg" or ".jpeg" or ".png" or ".gif" or ".webp" or ".svg" or ".bmp" or ".ico" => DownloadCategory.Media,
+            ".pdf" or ".doc" or ".docx" or ".xls" or ".xlsx" or ".ppt" or ".pptx" or ".txt" or ".md" or ".csv" or ".json" or ".xml" or ".epub" or ".mobi" or ".rtf" or ".bin" or ".dat" or ".log" or ".sql" or ".db" or ".torrent" or ".cfg" or ".ini" => DownloadCategory.Documents,
             _ => DownloadCategory.Other
         };
     }

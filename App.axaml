@@ -250,6 +250,17 @@
             <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
         </Style>
 
+        <!-- Active Sidebar Nav Item -->
+        <Style Selector="Button.nav-link.active">
+            <Setter Property="Background" Value="{DynamicResource AccentSubtleBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource AccentBrush}" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+        <Style Selector="Button.nav-link.active /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource AccentSubtleBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource AccentBrush}" />
+        </Style>
+
         <!-- Minimal Input Box with Transitions -->
         <Style Selector="TextBox.minimal-input">
             <Setter Property="Background" Value="{DynamicResource InputBgBrush}" />

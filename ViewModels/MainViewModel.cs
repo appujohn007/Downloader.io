@@ -58,10 +58,48 @@ public partial class MainViewModel : ViewModelBase
     private string _themeModeTitle = "LCD Dark";
 
     [ObservableProperty]
+    private string _selectedNavView = "All";
+
+    [ObservableProperty]
+    private int _totalAllCount = 0;
+
+    [ObservableProperty]
     private int _totalActiveCount = 0;
 
     [ObservableProperty]
     private int _totalCompletedCount = 0;
+
+    [ObservableProperty]
+    private int _totalPausedCount = 0;
+
+    [ObservableProperty]
+    private int _totalFailedCount = 0;
+
+    [ObservableProperty]
+    private int _totalCompressedCount = 0;
+
+    [ObservableProperty]
+    private int _totalProgramsCount = 0;
+
+    [ObservableProperty]
+    private int _totalMediaCount = 0;
+
+    [ObservableProperty]
+    private int _totalDocumentsCount = 0;
+
+    [ObservableProperty]
+    private int _totalOtherCount = 0;
+
+    public bool IsAllSelected => SelectedNavView == "All";
+    public bool IsActiveSelected => SelectedNavView == "Downloading";
+    public bool IsCompletedSelected => SelectedNavView == "Completed";
+    public bool IsPausedSelected => SelectedNavView == "Paused";
+    public bool IsFailedSelected => SelectedNavView == "Failed";
+    public bool IsCompressedSelected => SelectedNavView == "Compressed";
+    public bool IsProgramsSelected => SelectedNavView == "Programs";
+    public bool IsMediaSelected => SelectedNavView == "Media";
+    public bool IsDocumentsSelected => SelectedNavView == "Documents";
+    public bool IsOtherSelected => SelectedNavView == "Other";
 
     [ObservableProperty]
     private double _currentAggregateSpeed = 0.0;
@@ -242,6 +280,7 @@ public partial class MainViewModel : ViewModelBase
         }
 
         ApplyFilter();
+        RefreshStats();
     }
 
     public MainViewModel() : this(
@@ -334,6 +373,13 @@ public partial class MainViewModel : ViewModelBase
     {
         int active = 0;
         int completed = 0;
+        int paused = 0;
+        int failed = 0;
+        int compressed = 0;
+        int programs = 0;
+        int media = 0;
+        int documents = 0;
+        int other = 0;
         double totalSpeed = 0;
 
         foreach (var item in AllDownloads)
@@ -347,10 +393,35 @@ public partial class MainViewModel : ViewModelBase
             {
                 completed++;
             }
+            else if (item.Status == DownloadStatus.Paused)
+            {
+                paused++;
+            }
+            else if (item.Status == DownloadStatus.Failed)
+            {
+                failed++;
+            }
+
+            switch (item.Category)
+            {
+                case DownloadCategory.Compressed: compressed++; break;
+                case DownloadCategory.Programs: programs++; break;
+                case DownloadCategory.Media: media++; break;
+                case DownloadCategory.Documents: documents++; break;
+                case DownloadCategory.Other: other++; break;
+            }
         }
 
+        TotalAllCount = AllDownloads.Count;
         TotalActiveCount = active;
         TotalCompletedCount = completed;
+        TotalPausedCount = paused;
+        TotalFailedCount = failed;
+        TotalCompressedCount = compressed;
+        TotalProgramsCount = programs;
+        TotalMediaCount = media;
+        TotalDocumentsCount = documents;
+        TotalOtherCount = other;
         CurrentAggregateSpeed = totalSpeed;
         TotalDownloadSpeedFormatted = totalSpeed > 0 ? $"{DownloadItem.FormatBytes((long)totalSpeed)}/s" : "0 B/s";
 
@@ -816,15 +887,65 @@ public partial class MainViewModel : ViewModelBase
     }
 
     [RelayCommand]
+    public void SelectNav(string nav)
+    {
+        SelectedNavView = nav;
+
+        switch (nav)
+        {
+            case "All":
+                SelectedFilter = "All";
+                SelectedCategory = "All";
+                break;
+            case "Downloading":
+            case "Completed":
+            case "Paused":
+            case "Failed":
+                SelectedFilter = nav;
+                SelectedCategory = "All";
+                break;
+            case "Compressed":
+            case "Programs":
+            case "Media":
+            case "Documents":
+            case "Other":
+                SelectedCategory = nav;
+                SelectedFilter = "All";
+                break;
+            default:
+                SelectedFilter = "All";
+                SelectedCategory = "All";
+                break;
+        }
+
+        ApplyFilter();
+        NotifyNavPropertiesChanged();
+    }
+
+    [RelayCommand]
     private void SelectFilter(string filter)
     {
-        SelectedFilter = filter;
+        SelectNav(filter);
     }
 
     [RelayCommand]
     private void SelectCategory(string category)
     {
-        SelectedCategory = category;
+        SelectNav(category);
+    }
+
+    public void NotifyNavPropertiesChanged()
+    {
+        OnPropertyChanged(nameof(IsAllSelected));
+        OnPropertyChanged(nameof(IsActiveSelected));
+        OnPropertyChanged(nameof(IsCompletedSelected));
+        OnPropertyChanged(nameof(IsPausedSelected));
+        OnPropertyChanged(nameof(IsFailedSelected));
+        OnPropertyChanged(nameof(IsCompressedSelected));
+        OnPropertyChanged(nameof(IsProgramsSelected));
+        OnPropertyChanged(nameof(IsMediaSelected));
+        OnPropertyChanged(nameof(IsDocumentsSelected));
+        OnPropertyChanged(nameof(IsOtherSelected));
     }
 
     private void ShowNotification(string message)
