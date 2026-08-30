@@ -7,6 +7,19 @@ using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace DownloaderApp.Models;
 
+public enum FailureScenario
+{
+    None,
+    CloudflareChallenge,
+    AuthRequired,
+    NotFound,
+    RateLimited,
+    Timeout,
+    DnsUnreachable,
+    StorageError,
+    Generic
+}
+
 public partial class DownloadItem : ObservableObject
 {
     [ObservableProperty]
@@ -258,6 +271,31 @@ public partial class DownloadItem : ObservableObject
         }
     }
 
+    [JsonIgnore]
+    public FailureScenario ScenarioType
+    {
+        get
+        {
+            if (Status != DownloadStatus.Failed) return FailureScenario.None;
+            var err = ErrorMessage ?? string.Empty;
+            if (err.Contains("403") || err.Contains("Cloudflare", StringComparison.OrdinalIgnoreCase))
+                return FailureScenario.CloudflareChallenge;
+            if (err.Contains("401") || err.Contains("Unauthorized", StringComparison.OrdinalIgnoreCase))
+                return FailureScenario.AuthRequired;
+            if (err.Contains("404") || err.Contains("Not Found", StringComparison.OrdinalIgnoreCase))
+                return FailureScenario.NotFound;
+            if (err.Contains("429") || err.Contains("Too Many", StringComparison.OrdinalIgnoreCase))
+                return FailureScenario.RateLimited;
+            if (err.Contains("timeout", StringComparison.OrdinalIgnoreCase) || err.Contains("timed out", StringComparison.OrdinalIgnoreCase) || err.Contains("504") || err.Contains("408"))
+                return FailureScenario.Timeout;
+            if (err.Contains("name resolution", StringComparison.OrdinalIgnoreCase) || err.Contains("host", StringComparison.OrdinalIgnoreCase) || err.Contains("dns", StringComparison.OrdinalIgnoreCase))
+                return FailureScenario.DnsUnreachable;
+            if (err.Contains("disk", StringComparison.OrdinalIgnoreCase) || err.Contains("space", StringComparison.OrdinalIgnoreCase) || err.Contains("denied", StringComparison.OrdinalIgnoreCase))
+                return FailureScenario.StorageError;
+            return FailureScenario.Generic;
+        }
+    }
+
     partial void OnStatusChanged(DownloadStatus value)
     {
         OnPropertyChanged(nameof(StatusDisplayText));
@@ -269,12 +307,14 @@ public partial class DownloadItem : ObservableObject
         OnPropertyChanged(nameof(CanResume));
         OnPropertyChanged(nameof(ScenarioDiagnosticText));
         OnPropertyChanged(nameof(ScenarioDiagnosticIcon));
+        OnPropertyChanged(nameof(ScenarioType));
     }
 
     partial void OnErrorMessageChanged(string value)
     {
         OnPropertyChanged(nameof(ScenarioDiagnosticText));
         OnPropertyChanged(nameof(ScenarioDiagnosticIcon));
+        OnPropertyChanged(nameof(ScenarioType));
     }
 
     public void UpdateProgressMetrics(long downloaded, long total, double progressPct, double smoothedSpeed, bool updateSpeedDisplay)

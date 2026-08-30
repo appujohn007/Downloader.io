@@ -357,6 +357,7 @@
                                                 IsCompleted="{Binding IsCompleted}"
                                                 IsFailed="{Binding IsFailed}"
                                                 ErrorMessage="{Binding ErrorMessage}"
+                                                ScenarioType="{Binding ScenarioType}"
                                                 PaletteIndex="{Binding PaletteIndex}"
                                                 Segments="{Binding Segments}"
                                                 HorizontalAlignment="Stretch"
@@ -377,11 +378,11 @@
                                                         </Border>
                                                         <!-- Failure Scenario Diagnostic Badge -->
                                                         <Border IsVisible="{Binding IsFailed}"
-                                                                Background="#25EF4444"
-                                                                BorderBrush="#60EF4444"
+                                                                Background="#28EF4444"
+                                                                BorderBrush="#70EF4444"
                                                                 BorderThickness="1"
                                                                 CornerRadius="4"
-                                                                Padding="6,1"
+                                                                Padding="6,2"
                                                                 Margin="4,0,0,0"
                                                                 ToolTip.Tip="{Binding ErrorMessage}">
                                                             <StackPanel Orientation="Horizontal" Spacing="4">
@@ -393,9 +394,10 @@
                                                     <TextBlock Grid.Column="1" Text="{Binding FormattedSize}" MinWidth="110" TextAlignment="Right" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center" Margin="8,0,0,0" />
                                                 </Grid>
 
-                                                <!-- Middle Row: Minimal Progress Bar -->
+                                                <!-- Middle Row: Minimal Progress Bar (Hidden when failed in favor of subtle scenario glow) -->
                                                 <ProgressBar Grid.Row="1"
                                                              Classes="thin-progress"
+                                                             IsVisible="{Binding !IsFailed}"
                                                              IsIndeterminate="{Binding IsIndeterminate}"
                                                              Value="{Binding ProgressPercentage}"
                                                              Minimum="0"
