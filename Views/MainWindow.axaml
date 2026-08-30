@@ -535,41 +535,208 @@
             <Border Background="{DynamicResource CardBgBrush}"
                     BorderBrush="{DynamicResource BorderBrushCustom}"
                     BorderThickness="1"
-                    CornerRadius="10"
-                    Width="640"
-                    MaxHeight="580"
+                    CornerRadius="12"
+                    Width="720"
+                    MaxHeight="620"
                     HorizontalAlignment="Center"
                     VerticalAlignment="Center"
                     Padding="22">
                 <Grid RowDefinitions="Auto, Auto, *, Auto">
                     <!-- Header -->
-                    <Grid Grid.Row="0" ColumnDefinitions="*, Auto" Margin="0,0,0,12">
-                        <StackPanel Grid.Column="0" Spacing="2">
-                            <TextBlock Text="Download Inspector &amp; Thread Map" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" />
+                    <Grid Grid.Row="0" ColumnDefinitions="*, Auto" Margin="0,0,0,14">
+                        <StackPanel Grid.Column="0" Spacing="3">
+                            <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                <TextBlock Text="Download Intelligence &amp; Forensics" FontSize="15" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}" />
+                                <Border Background="{DynamicResource AccentSubtleBrush}" CornerRadius="4" Padding="6,2">
+                                    <TextBlock Text="{Binding InspectedItem.StatusDisplayText}" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" />
+                                </Border>
+                            </StackPanel>
                             <TextBlock Text="{Binding InspectedItem.FileName}" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" TextTrimming="CharacterEllipsis" />
                         </StackPanel>
-                        <Button Grid.Column="1" Classes="ghost-btn" Command="{Binding CloseInspectorCommand}" Padding="4">
-                            <PathIcon Width="10" Height="10" Foreground="{DynamicResource TextSecondaryBrush}" Data="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
+                        <Button Grid.Column="1" Classes="ghost-btn" Command="{Binding CloseInspectorCommand}" Padding="6">
+                            <PathIcon Width="11" Height="11" Foreground="{DynamicResource TextSecondaryBrush}" Data="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
                         </Button>
                     </Grid>
 
-                    <!-- Tab Switcher -->
-                    <Grid Grid.Row="1" ColumnDefinitions="*, *, *" Margin="0,0,0,14">
-                        <Button Grid.Column="0" Classes="subtle-btn" Command="{Binding SelectInspectorTabCommand}" CommandParameter="0" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Margin="0,0,3,0">
-                            <TextBlock Text="Threads Matrix" FontSize="11" />
+                    <!-- Modern 5-Tab Switcher Bar -->
+                    <Grid Grid.Row="1" ColumnDefinitions="*, *, *, *, *" Margin="0,0,0,16">
+                        <Button Grid.Column="0" Classes="subtle-btn" Command="{Binding SelectInspectorTabCommand}" CommandParameter="0" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Margin="0,0,2,0" Padding="4,6">
+                            <TextBlock Text="⚡ Network" FontSize="11" FontWeight="{Binding IsTab0, Converter={x:Static ObjectConverters.IsNotNull}}" />
                         </Button>
-                        <Button Grid.Column="1" Classes="subtle-btn" Command="{Binding SelectInspectorTabCommand}" CommandParameter="1" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Margin="3,0,3,0">
-                            <TextBlock Text="Checksum Verifier" FontSize="11" />
+                        <Button Grid.Column="1" Classes="subtle-btn" Command="{Binding SelectInspectorTabCommand}" CommandParameter="1" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Margin="2,0,2,0" Padding="4,6">
+                            <TextBlock Text="📁 Intelligence" FontSize="11" />
                         </Button>
-                        <Button Grid.Column="2" Classes="subtle-btn" Command="{Binding SelectInspectorTabCommand}" CommandParameter="2" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Margin="3,0,0,0">
-                            <TextBlock Text="Headers &amp; Info" FontSize="11" />
+                        <Button Grid.Column="2" Classes="subtle-btn" Command="{Binding SelectInspectorTabCommand}" CommandParameter="2" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Margin="2,0,2,0" Padding="4,6">
+                            <TextBlock Text="🧵 Streams" FontSize="11" />
+                        </Button>
+                        <Button Grid.Column="3" Classes="subtle-btn" Command="{Binding SelectInspectorTabCommand}" CommandParameter="3" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Margin="2,0,2,0" Padding="4,6">
+                            <TextBlock Text="🔒 Integrity" FontSize="11" />
+                        </Button>
+                        <Button Grid.Column="4" Classes="subtle-btn" Command="{Binding SelectInspectorTabCommand}" CommandParameter="4" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Margin="2,0,0,0" Padding="4,6">
+                            <TextBlock Text="📋 Headers" FontSize="11" />
                         </Button>
                     </Grid>
 
                     <!-- Content Tab Area -->
                     <Grid Grid.Row="2">
-                        <!-- Tab 0: Detailed Thread Visualizer & Position Info -->
-                        <ScrollViewer VerticalScrollBarVisibility="Auto" MaxHeight="360" IsVisible="{Binding IsTab0}">
+                        <!-- Tab 0: Network & Protocol Telemetry -->
+                        <ScrollViewer VerticalScrollBarVisibility="Auto" MaxHeight="380" IsVisible="{Binding IsTab0}">
+                            <StackPanel Spacing="12">
+                                <!-- Telemetry KPI Grid -->
+                                <Grid ColumnDefinitions="*, *, *" RowDefinitions="Auto, Auto" Margin="0,0,0,4">
+                                    <!-- Protocol & Cipher -->
+                                    <Border Grid.Row="0" Grid.Column="0" Background="{DynamicResource ChipBgBrush}" CornerRadius="6" Padding="10,8" Margin="0,0,4,6">
+                                        <StackPanel Spacing="2">
+                                            <TextBlock Text="PROTOCOL" FontSize="9" FontWeight="Bold" Foreground="{DynamicResource TextMutedBrush}" />
+                                            <TextBlock Text="{Binding InspectedItem.HttpProtocol}" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" />
+                                            <TextBlock Text="{Binding InspectedItem.TlsCipher}" FontSize="9" Foreground="{DynamicResource TextSecondaryBrush}" />
+                                        </StackPanel>
+                                    </Border>
+
+                                    <!-- CDN & Edge Provider -->
+                                    <Border Grid.Row="0" Grid.Column="1" Background="{DynamicResource ChipBgBrush}" CornerRadius="6" Padding="10,8" Margin="2,0,2,6">
+                                        <StackPanel Spacing="2">
+                                            <TextBlock Text="CDN / EDGE NODE" FontSize="9" FontWeight="Bold" Foreground="{DynamicResource TextMutedBrush}" />
+                                            <TextBlock Text="{Binding InspectedItem.CdnProvider}" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}" />
+                                            <TextBlock Text="{Binding InspectedItem.CdnRayId, StringFormat='{}Ray: {0}'}" IsVisible="{Binding InspectedItem.CdnRayId, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" FontSize="9" Foreground="{DynamicResource TextSecondaryBrush}" TextTrimming="CharacterEllipsis" />
+                                        </StackPanel>
+                                    </Border>
+
+                                    <!-- TTFB Latency -->
+                                    <Border Grid.Row="0" Grid.Column="2" Background="{DynamicResource ChipBgBrush}" CornerRadius="6" Padding="10,8" Margin="4,0,0,6">
+                                        <StackPanel Spacing="2">
+                                            <TextBlock Text="TTFB LATENCY" FontSize="9" FontWeight="Bold" Foreground="{DynamicResource TextMutedBrush}" />
+                                            <TextBlock Text="{Binding InspectedItem.FormattedTtfb}" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" />
+                                            <TextBlock Text="Time to First Byte" FontSize="9" Foreground="{DynamicResource TextSecondaryBrush}" />
+                                        </StackPanel>
+                                    </Border>
+
+                                    <!-- Peak Speed -->
+                                    <Border Grid.Row="1" Grid.Column="0" Background="{DynamicResource ChipBgBrush}" CornerRadius="6" Padding="10,8" Margin="0,0,4,0">
+                                        <StackPanel Spacing="2">
+                                            <TextBlock Text="PEAK BURST SPEED" FontSize="9" FontWeight="Bold" Foreground="{DynamicResource TextMutedBrush}" />
+                                            <TextBlock Text="{Binding InspectedItem.FormattedPeakSpeed}" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" />
+                                        </StackPanel>
+                                    </Border>
+
+                                    <!-- Average Speed -->
+                                    <Border Grid.Row="1" Grid.Column="1" Background="{DynamicResource ChipBgBrush}" CornerRadius="6" Padding="10,8" Margin="2,0,2,0">
+                                        <StackPanel Spacing="2">
+                                            <TextBlock Text="AVG THROUGHPUT" FontSize="9" FontWeight="Bold" Foreground="{DynamicResource TextMutedBrush}" />
+                                            <TextBlock Text="{Binding InspectedItem.FormattedAverageSpeed}" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" />
+                                        </StackPanel>
+                                    </Border>
+
+                                    <!-- Active Duration -->
+                                    <Border Grid.Row="1" Grid.Column="2" Background="{DynamicResource ChipBgBrush}" CornerRadius="6" Padding="10,8" Margin="4,0,0,0">
+                                        <StackPanel Spacing="2">
+                                            <TextBlock Text="TRANSFER DURATION" FontSize="9" FontWeight="Bold" Foreground="{DynamicResource TextMutedBrush}" />
+                                            <TextBlock Text="{Binding InspectedItem.FormattedActiveDuration}" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" />
+                                        </StackPanel>
+                                    </Border>
+                                </Grid>
+
+                                <!-- Source URL -->
+                                <StackPanel Spacing="3">
+                                    <Grid ColumnDefinitions="*, Auto">
+                                        <TextBlock Grid.Column="0" Text="SOURCE URL:" FontSize="9" FontWeight="Bold" Foreground="{DynamicResource TextMutedBrush}" />
+                                        <Button Grid.Column="1" Classes="ghost-btn" Command="{Binding CopyTextCommand}" CommandParameter="{Binding InspectedItem.Url}" Padding="4,1">
+                                            <TextBlock Text="Copy URL" FontSize="10" Foreground="{DynamicResource AccentBrush}" />
+                                        </Button>
+                                    </Grid>
+                                    <TextBox Classes="minimal-input" Text="{Binding InspectedItem.Url}" IsReadOnly="True" FontSize="10" TextWrapping="Wrap" />
+                                </StackPanel>
+
+                                <!-- Server Capabilities Summary -->
+                                <Border Background="{DynamicResource ChipBgBrush}" CornerRadius="6" Padding="12,10">
+                                    <Grid ColumnDefinitions="*, *" RowDefinitions="Auto, Auto">
+                                        <StackPanel Grid.Row="0" Grid.Column="0" Spacing="2" Margin="0,0,8,6">
+                                            <TextBlock Text="Server Software:" FontSize="9" Foreground="{DynamicResource TextMutedBrush}" />
+                                            <TextBlock Text="{Binding InspectedItem.ServerSoftware, FallbackValue='Standard Web Server'}" FontSize="11" FontWeight="Medium" Foreground="{DynamicResource TextPrimaryBrush}" />
+                                        </StackPanel>
+                                        <StackPanel Grid.Row="0" Grid.Column="1" Spacing="2" Margin="0,0,0,6">
+                                            <TextBlock Text="Range Resumption:" FontSize="9" Foreground="{DynamicResource TextMutedBrush}" />
+                                            <TextBlock Text="{Binding InspectedItem.AcceptRangesHeader, FallbackValue='bytes (Supported)'}" FontSize="11" FontWeight="Medium" Foreground="{DynamicResource TextPrimaryBrush}" />
+                                        </StackPanel>
+                                        <StackPanel Grid.Row="1" Grid.Column="0" Spacing="2" Margin="0,0,8,0">
+                                            <TextBlock Text="Entity Validator (ETag):" FontSize="9" Foreground="{DynamicResource TextMutedBrush}" />
+                                            <TextBlock Text="{Binding InspectedItem.ETag, FallbackValue='-'}" FontSize="10" Foreground="{DynamicResource TextSecondaryBrush}" TextTrimming="CharacterEllipsis" />
+                                        </StackPanel>
+                                        <StackPanel Grid.Row="1" Grid.Column="1" Spacing="2">
+                                            <TextBlock Text="Last Modified Timestamp:" FontSize="9" Foreground="{DynamicResource TextMutedBrush}" />
+                                            <TextBlock Text="{Binding InspectedItem.LastModifiedHeader, FallbackValue='-'}" FontSize="10" Foreground="{DynamicResource TextSecondaryBrush}" />
+                                        </StackPanel>
+                                    </Grid>
+                                </Border>
+                            </StackPanel>
+                        </ScrollViewer>
+
+                        <!-- Tab 1: File Intelligence & Storage -->
+                        <ScrollViewer VerticalScrollBarVisibility="Auto" MaxHeight="380" IsVisible="{Binding IsTab1}">
+                            <StackPanel Spacing="12">
+                                <!-- Verified Binary Analysis Card -->
+                                <Border Background="{DynamicResource ChipBgBrush}" BorderBrush="{DynamicResource BorderBrushCustom}" BorderThickness="1" CornerRadius="8" Padding="14,12">
+                                    <StackPanel Spacing="8">
+                                        <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                            <TextBlock Text="🔍 Binary Magic Byte Verification" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" />
+                                        </StackPanel>
+
+                                        <Grid ColumnDefinitions="*, *" RowDefinitions="Auto, Auto">
+                                            <StackPanel Grid.Row="0" Grid.Column="0" Spacing="2" Margin="0,0,8,8">
+                                                <TextBlock Text="Verified Format:" FontSize="9" Foreground="{DynamicResource TextMutedBrush}" />
+                                                <TextBlock Text="{Binding InspectedItem.MagicByteType, FallbackValue='Binary Stream'}" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" />
+                                            </StackPanel>
+                                            <StackPanel Grid.Row="0" Grid.Column="1" Spacing="2" Margin="0,0,0,8">
+                                                <TextBlock Text="Declared MIME Type:" FontSize="9" Foreground="{DynamicResource TextMutedBrush}" />
+                                                <TextBlock Text="{Binding InspectedItem.MimeType, FallbackValue='application/octet-stream'}" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" />
+                                            </StackPanel>
+                                            <StackPanel Grid.Row="1" Grid.Column="0" Spacing="2" Margin="0,0,8,0">
+                                                <TextBlock Text="Header Magic Bytes (Hex):" FontSize="9" Foreground="{DynamicResource TextMutedBrush}" />
+                                                <TextBlock Text="{Binding InspectedItem.MagicBytesHex, FallbackValue='-'}" FontFamily="Consolas, monospace" FontSize="11" Foreground="{DynamicResource AccentBrush}" />
+                                            </StackPanel>
+                                            <StackPanel Grid.Row="1" Grid.Column="1" Spacing="2">
+                                                <TextBlock Text="Type-Specific Details:" FontSize="9" Foreground="{DynamicResource TextMutedBrush}" />
+                                                <TextBlock Text="{Binding InspectedItem.TypeSpecificDetails, FallbackValue='Standard Binary Container'}" FontSize="11" FontWeight="Medium" Foreground="{DynamicResource TextPrimaryBrush}" />
+                                            </StackPanel>
+                                        </Grid>
+                                    </StackPanel>
+                                </Border>
+
+                                <!-- Storage & Destination Path -->
+                                <StackPanel Spacing="4">
+                                    <Grid ColumnDefinitions="*, Auto">
+                                        <TextBlock Grid.Column="0" Text="LOCAL DESTINATION FILE:" FontSize="9" FontWeight="Bold" Foreground="{DynamicResource TextMutedBrush}" />
+                                        <Button Grid.Column="1" Classes="ghost-btn" Command="{Binding CopyTextCommand}" CommandParameter="{Binding InspectedItem.FullPath}" Padding="4,1">
+                                            <TextBlock Text="Copy Path" FontSize="10" Foreground="{DynamicResource AccentBrush}" />
+                                        </Button>
+                                    </Grid>
+                                    <TextBox Classes="minimal-input" Text="{Binding InspectedItem.FullPath}" IsReadOnly="True" FontSize="10" TextWrapping="Wrap" />
+                                </StackPanel>
+
+                                <!-- Target Storage Volume Info -->
+                                <Border Background="{DynamicResource ChipBgBrush}" CornerRadius="6" Padding="12,10">
+                                    <StackPanel Spacing="6">
+                                        <TextBlock Text="STORAGE VOLUME METRICS" FontSize="9" FontWeight="Bold" Foreground="{DynamicResource TextMutedBrush}" />
+                                        <TextBlock Text="{Binding InspectedItem.TargetStorageInfo, FallbackValue='NTFS Fixed Drive'}" FontSize="11" FontWeight="Medium" Foreground="{DynamicResource TextPrimaryBrush}" />
+                                    </StackPanel>
+                                </Border>
+
+                                <!-- Lifecycle Timestamps -->
+                                <Grid ColumnDefinitions="*, *">
+                                    <StackPanel Grid.Column="0" Spacing="2">
+                                        <TextBlock Text="Created &amp; Queued:" FontSize="9" Foreground="{DynamicResource TextMutedBrush}" />
+                                        <TextBlock Text="{Binding InspectedItem.CreatedAt, StringFormat='{}{0:yyyy-MM-dd HH:mm:ss}'}" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" />
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="1" Spacing="2">
+                                        <TextBlock Text="Completed &amp; Assembled:" FontSize="9" Foreground="{DynamicResource TextMutedBrush}" />
+                                        <TextBlock Text="{Binding InspectedItem.CompletedAt, StringFormat='{}{0:yyyy-MM-dd HH:mm:ss}', FallbackValue='In Progress'}" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" />
+                                    </StackPanel>
+                                </Grid>
+                            </StackPanel>
+                        </ScrollViewer>
+
+                        <!-- Tab 2: Streams & Threads Matrix -->
+                        <ScrollViewer VerticalScrollBarVisibility="Auto" MaxHeight="380" IsVisible="{Binding IsTab2}">
                             <StackPanel Spacing="10">
                                 <!-- Concurrency Summary Card -->
                                 <Border Background="{DynamicResource ChipBgBrush}" CornerRadius="6" Padding="12,8">
@@ -644,64 +811,109 @@
                             </StackPanel>
                         </ScrollViewer>
 
-                        <!-- Tab 1: Checksum verification -->
-                        <StackPanel Spacing="10" IsVisible="{Binding IsTab1}">
-                            <TextBlock Text="Cryptographic Hash Verification" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource TextMutedBrush}" />
-                            <Grid ColumnDefinitions="Auto, *">
-                                <ComboBox Grid.Column="0" SelectedItem="{Binding ChecksumAlgorithm}" SelectedIndex="0" MaxHeight="30" FontSize="11" Margin="0,0,8,0">
-                                    <ComboBoxItem Content="SHA256" />
-                                    <ComboBoxItem Content="MD5" />
-                                </ComboBox>
-                                <Button Grid.Column="1" Classes="primary-btn" Command="{Binding ComputeChecksumCommand}" Content="Compute Hash" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
-                            </Grid>
-                            <StackPanel Spacing="4">
-                                <TextBlock Text="Calculated File Hash:" FontSize="10" Foreground="{DynamicResource TextSecondaryBrush}" />
-                                <TextBox Classes="minimal-input" Text="{Binding CalculatedChecksum}" IsReadOnly="True" FontSize="11" />
-                            </StackPanel>
-                            <StackPanel Spacing="4">
+                        <!-- Tab 3: Cryptographic Hashes & Integrity -->
+                        <ScrollViewer VerticalScrollBarVisibility="Auto" MaxHeight="380" IsVisible="{Binding IsTab3}">
+                            <StackPanel Spacing="10">
                                 <Grid ColumnDefinitions="*, Auto">
-                                    <TextBlock Grid.Column="0" Text="Compare against expected hash:" FontSize="10" Foreground="{DynamicResource TextSecondaryBrush}" />
-                                    <Button Grid.Column="1" Classes="ghost-btn" Command="{Binding PasteExpectedChecksumCommand}" Padding="4,0">
-                                        <TextBlock Text="Paste from clipboard" FontSize="10" Foreground="{DynamicResource AccentBrush}" />
+                                    <TextBlock Grid.Column="0" Text="Cryptographic Multi-Algorithm Checksums" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center" />
+                                    <Button Grid.Column="1" Classes="primary-btn" Command="{Binding ComputeChecksumCommand}" Content="⚡ Compute Hashes" Padding="8,4" />
+                                </Grid>
+
+                                <!-- SHA-256 Card -->
+                                <Border Background="{DynamicResource ChipBgBrush}" CornerRadius="6" Padding="10,6">
+                                    <Grid ColumnDefinitions="60, *, Auto">
+                                        <TextBlock Grid.Column="0" Text="SHA-256" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" />
+                                        <TextBox Grid.Column="1" Classes="minimal-input" Text="{Binding InspectedItem.ChecksumSha256, FallbackValue='Click Compute Hashes'}" IsReadOnly="True" FontFamily="Consolas, monospace" FontSize="10" />
+                                        <Button Grid.Column="2" Classes="ghost-btn" Command="{Binding CopyTextCommand}" CommandParameter="{Binding InspectedItem.ChecksumSha256}" Padding="4,2" Margin="4,0,0,0">
+                                            <TextBlock Text="Copy" FontSize="10" Foreground="{DynamicResource TextSecondaryBrush}" />
+                                        </Button>
+                                    </Grid>
+                                </Border>
+
+                                <!-- SHA-1 Card -->
+                                <Border Background="{DynamicResource ChipBgBrush}" CornerRadius="6" Padding="10,6">
+                                    <Grid ColumnDefinitions="60, *, Auto">
+                                        <TextBlock Grid.Column="0" Text="SHA-1" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center" />
+                                        <TextBox Grid.Column="1" Classes="minimal-input" Text="{Binding InspectedItem.ChecksumSha1, FallbackValue='Click Compute Hashes'}" IsReadOnly="True" FontFamily="Consolas, monospace" FontSize="10" />
+                                        <Button Grid.Column="2" Classes="ghost-btn" Command="{Binding CopyTextCommand}" CommandParameter="{Binding InspectedItem.ChecksumSha1}" Padding="4,2" Margin="4,0,0,0">
+                                            <TextBlock Text="Copy" FontSize="10" Foreground="{DynamicResource TextSecondaryBrush}" />
+                                        </Button>
+                                    </Grid>
+                                </Border>
+
+                                <!-- MD5 Card -->
+                                <Border Background="{DynamicResource ChipBgBrush}" CornerRadius="6" Padding="10,6">
+                                    <Grid ColumnDefinitions="60, *, Auto">
+                                        <TextBlock Grid.Column="0" Text="MD5" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center" />
+                                        <TextBox Grid.Column="1" Classes="minimal-input" Text="{Binding InspectedItem.ChecksumMd5, FallbackValue='Click Compute Hashes'}" IsReadOnly="True" FontFamily="Consolas, monospace" FontSize="10" />
+                                        <Button Grid.Column="2" Classes="ghost-btn" Command="{Binding CopyTextCommand}" CommandParameter="{Binding InspectedItem.ChecksumMd5}" Padding="4,2" Margin="4,0,0,0">
+                                            <TextBlock Text="Copy" FontSize="10" Foreground="{DynamicResource TextSecondaryBrush}" />
+                                        </Button>
+                                    </Grid>
+                                </Border>
+
+                                <!-- CRC32 Card -->
+                                <Border Background="{DynamicResource ChipBgBrush}" CornerRadius="6" Padding="10,6">
+                                    <Grid ColumnDefinitions="60, *, Auto">
+                                        <TextBlock Grid.Column="0" Text="CRC-32" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center" />
+                                        <TextBox Grid.Column="1" Classes="minimal-input" Text="{Binding InspectedItem.ChecksumCrc32, FallbackValue='Click Compute Hashes'}" IsReadOnly="True" FontFamily="Consolas, monospace" FontSize="10" />
+                                        <Button Grid.Column="2" Classes="ghost-btn" Command="{Binding CopyTextCommand}" CommandParameter="{Binding InspectedItem.ChecksumCrc32}" Padding="4,2" Margin="4,0,0,0">
+                                            <TextBlock Text="Copy" FontSize="10" Foreground="{DynamicResource TextSecondaryBrush}" />
+                                        </Button>
+                                    </Grid>
+                                </Border>
+
+                                <!-- SHA-512 Card -->
+                                <Border Background="{DynamicResource ChipBgBrush}" CornerRadius="6" Padding="10,6">
+                                    <Grid ColumnDefinitions="60, *, Auto">
+                                        <TextBlock Grid.Column="0" Text="SHA-512" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center" />
+                                        <TextBox Grid.Column="1" Classes="minimal-input" Text="{Binding InspectedItem.ChecksumSha512, FallbackValue='Click Compute Hashes'}" IsReadOnly="True" FontFamily="Consolas, monospace" FontSize="10" />
+                                        <Button Grid.Column="2" Classes="ghost-btn" Command="{Binding CopyTextCommand}" CommandParameter="{Binding InspectedItem.ChecksumSha512}" Padding="4,2" Margin="4,0,0,0">
+                                            <TextBlock Text="Copy" FontSize="10" Foreground="{DynamicResource TextSecondaryBrush}" />
+                                        </Button>
+                                    </Grid>
+                                </Border>
+
+                                <!-- Smart Hash Matcher -->
+                                <StackPanel Spacing="4" Margin="0,4,0,0">
+                                    <Grid ColumnDefinitions="*, Auto">
+                                        <TextBlock Grid.Column="0" Text="Compare against expected hash / ETag:" FontSize="10" Foreground="{DynamicResource TextSecondaryBrush}" />
+                                        <Button Grid.Column="1" Classes="ghost-btn" Command="{Binding PasteExpectedChecksumCommand}" Padding="4,0">
+                                            <TextBlock Text="Paste from clipboard" FontSize="10" Foreground="{DynamicResource AccentBrush}" />
+                                        </Button>
+                                    </Grid>
+                                    <TextBox Classes="minimal-input" Text="{Binding ExpectedChecksumInput}" Watermark="Paste MD5 / SHA-256 / SHA-1 hash to verify..." FontSize="11" />
+                                </StackPanel>
+
+                                <!-- Match Indicator -->
+                                <Border IsVisible="{Binding ChecksumMatchStatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                                        Background="{DynamicResource ChipBgBrush}" CornerRadius="6" Padding="10,6">
+                                    <TextBlock Text="{Binding ChecksumMatchStatusText}" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" />
+                                </Border>
+                            </StackPanel>
+                        </ScrollViewer>
+
+                        <!-- Tab 4: Raw HTTP Headers -->
+                        <ScrollViewer VerticalScrollBarVisibility="Auto" MaxHeight="380" IsVisible="{Binding IsTab4}">
+                            <StackPanel Spacing="8">
+                                <Grid ColumnDefinitions="*, Auto">
+                                    <TextBlock Grid.Column="0" Text="Server HTTP Response Headers:" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}" />
+                                    <Button Grid.Column="1" Classes="ghost-btn" Command="{Binding CopyTextCommand}" CommandParameter="{Binding InspectedItem.ResponseHeadersText}" Padding="4,2">
+                                        <TextBlock Text="Copy All Headers" FontSize="10" Foreground="{DynamicResource AccentBrush}" />
                                     </Button>
                                 </Grid>
-                                <TextBox Classes="minimal-input" Text="{Binding ExpectedChecksumInput}" Watermark="Paste MD5 / SHA-256 hash here..." FontSize="11" />
-                            </StackPanel>
-                            <!-- Match Indicator -->
-                            <Border IsVisible="{Binding ChecksumMatchStatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
-                                    Background="{DynamicResource ChipBgBrush}" CornerRadius="6" Padding="10,6">
-                                <TextBlock Text="{Binding ChecksumMatchStatusText}" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" />
-                            </Border>
-                        </StackPanel>
-
-                        <!-- Tab 2: Headers & Info -->
-                        <ScrollViewer VerticalScrollBarVisibility="Auto" MaxHeight="360" IsVisible="{Binding IsTab2}">
-                            <StackPanel Spacing="8">
-                                <TextBlock Text="Source URL:" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource TextMutedBrush}" />
-                                <TextBox Classes="minimal-input" Text="{Binding InspectedItem.Url}" IsReadOnly="True" FontSize="10" TextWrapping="Wrap" />
-
-                                <TextBlock Text="Destination Path:" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource TextMutedBrush}" Margin="0,4,0,0" />
-                                <TextBox Classes="minimal-input" Text="{Binding InspectedItem.FullPath}" IsReadOnly="True" FontSize="10" TextWrapping="Wrap" />
-
-                                <TextBlock Text="Server Info:" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource TextMutedBrush}" Margin="0,4,0,0" />
-                                <TextBox Classes="minimal-input" Text="{Binding InspectedItem.ServerHeadersSummary}" IsReadOnly="True" FontSize="10" />
-
-                                <Grid ColumnDefinitions="*, *" Margin="0,4,0,0">
-                                    <StackPanel Grid.Column="0" Spacing="2">
-                                        <TextBlock Text="Created:" FontSize="10" Foreground="{DynamicResource TextMutedBrush}" />
-                                        <TextBlock Text="{Binding InspectedItem.CreatedAt, StringFormat='{}{0:yyyy-MM-dd HH:mm:ss}'}" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" />
-                                    </StackPanel>
-                                    <StackPanel Grid.Column="1" Spacing="2">
-                                        <TextBlock Text="Completed:" FontSize="10" Foreground="{DynamicResource TextMutedBrush}" />
-                                        <TextBlock Text="{Binding InspectedItem.CompletedAt, StringFormat='{}{0:yyyy-MM-dd HH:mm:ss}'}" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" />
-                                    </StackPanel>
-                                </Grid>
+                                <TextBox Classes="minimal-input" Text="{Binding InspectedItem.ResponseHeadersText, FallbackValue='No server headers recorded yet.'}" IsReadOnly="True" FontFamily="Consolas, monospace" FontSize="10" TextWrapping="Wrap" MaxHeight="320" />
                             </StackPanel>
                         </ScrollViewer>
                     </Grid>
 
                     <!-- Footer -->
-                    <Button Grid.Row="3" Classes="subtle-btn" Command="{Binding CloseInspectorCommand}" Content="Close Inspector" HorizontalAlignment="Right" Margin="0,12,0,0" />
+                    <Grid Grid.Row="3" ColumnDefinitions="*, Auto" Margin="0,14,0,0">
+                        <Button Grid.Column="0" Classes="ghost-btn" Command="{Binding OpenFileCommand}" CommandParameter="{Binding InspectedItem}" IsVisible="{Binding InspectedItem.IsCompleted}" Padding="8,4">
+                            <TextBlock Text="Open File Location" FontSize="11" Foreground="{DynamicResource AccentBrush}" />
+                        </Button>
+                        <Button Grid.Column="1" Classes="subtle-btn" Command="{Binding CloseInspectorCommand}" Content="Close Inspector" Padding="14,6" />
+                    </Grid>
                 </Grid>
             </Border>
         </Border>

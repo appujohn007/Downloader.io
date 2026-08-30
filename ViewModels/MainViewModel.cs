@@ -177,9 +177,11 @@ public partial class MainViewModel : ViewModelBase
     public bool IsTab0 => InspectorTab == 0;
     public bool IsTab1 => InspectorTab == 1;
     public bool IsTab2 => InspectorTab == 2;
+    public bool IsTab3 => InspectorTab == 3;
+    public bool IsTab4 => InspectorTab == 4;
 
     public string ChecksumMatchStatusText => ChecksumMatchResult.HasValue
-        ? (ChecksumMatchResult.Value ? "✓ Match Verified (Checksums Identical)" : "✗ Mismatch Detected (Hashes Do Not Match)")
+        ? (ChecksumMatchResult.Value ? "✓ Match Verified (Checksum Identical)" : "✗ Mismatch Detected (Hashes Do Not Match)")
         : string.Empty;
 
     // Settings Drawer
@@ -350,6 +352,8 @@ public partial class MainViewModel : ViewModelBase
         OnPropertyChanged(nameof(IsTab0));
         OnPropertyChanged(nameof(IsTab1));
         OnPropertyChanged(nameof(IsTab2));
+        OnPropertyChanged(nameof(IsTab3));
+        OnPropertyChanged(nameof(IsTab4));
     }
 
     partial void OnSelectedSpeedCapIndexChanged(int value)
@@ -656,11 +660,28 @@ public partial class MainViewModel : ViewModelBase
     {
         if (item == null) return;
         InspectedItem = item;
+
+        // Perform instant deep file inspection
+        if (File.Exists(item.FullPath) || File.Exists(item.PartialPath))
+        {
+            var insp = FileInspectionService.InspectFile(item.FullPath);
+            item.MagicBytesHex = insp.MagicBytesHex;
+            item.MagicByteType = insp.MagicByteType;
+            item.TypeSpecificDetails = insp.TypeSpecificDetails;
+            item.TargetStorageInfo = insp.StorageDriveInfo;
+        }
+
         CalculatedChecksum = item.ChecksumSha256 ?? item.ChecksumMd5 ?? string.Empty;
         ExpectedChecksumInput = string.Empty;
         ChecksumMatchResult = null;
         InspectorTab = 0;
         IsInspectorOpen = true;
+
+        // Auto-compute all hashes if file is completed and hashes not generated yet
+        if (item.Status == DownloadStatus.Completed && File.Exists(item.FullPath) && string.IsNullOrEmpty(item.ChecksumSha256))
+        {
+            _ = ComputeAllItemHashesAsync(item);
+        }
     }
 
     [RelayCommand]
@@ -687,27 +708,37 @@ public partial class MainViewModel : ViewModelBase
             return;
         }
 
+        await ComputeAllItemHashesAsync(InspectedItem);
+        VerifyChecksumMatch();
+        ShowNotification("All cryptographic hashes generated.");
+    }
+
+    private async Task ComputeAllItemHashesAsync(DownloadItem item)
+    {
         IsCalculatingChecksum = true;
         try
         {
-            var hash = await _downloadService.ComputeHashAsync(InspectedItem.FullPath, ChecksumAlgorithm);
-            CalculatedChecksum = hash;
+            var hashes = await FileInspectionService.ComputeAllHashesAsync(item.FullPath);
+            item.ChecksumSha256 = hashes.Sha256;
+            item.ChecksumSha1 = hashes.Sha1;
+            item.ChecksumMd5 = hashes.Md5;
+            item.ChecksumSha512 = hashes.Sha512;
+            item.ChecksumCrc32 = hashes.Crc32;
+            CalculatedChecksum = hashes.Sha256;
 
-            if (ChecksumAlgorithm == "MD5")
+            if (!string.IsNullOrEmpty(item.ETag))
             {
-                InspectedItem.ChecksumMd5 = hash;
+                var cleanEtag = item.ETag.Trim('"', 'W', '/', ' ');
+                if (string.Equals(cleanEtag, hashes.Md5, StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(cleanEtag, hashes.Sha256, StringComparison.OrdinalIgnoreCase))
+                {
+                    item.IsChecksumMatched = true;
+                }
             }
-            else
-            {
-                InspectedItem.ChecksumSha256 = hash;
-            }
-
-            VerifyChecksumMatch();
-            ShowNotification($"{ChecksumAlgorithm} hash generated.");
         }
         catch (Exception ex)
         {
-            ShowNotification($"Failed to compute hash: {ex.Message}");
+            ShowNotification($"Failed to compute hashes: {ex.Message}");
         }
         finally
         {
@@ -718,14 +749,20 @@ public partial class MainViewModel : ViewModelBase
     [RelayCommand]
     private void VerifyChecksumMatch()
     {
-        if (string.IsNullOrWhiteSpace(CalculatedChecksum) || string.IsNullOrWhiteSpace(ExpectedChecksumInput))
+        if (InspectedItem == null || string.IsNullOrWhiteSpace(ExpectedChecksumInput))
         {
             ChecksumMatchResult = null;
             OnPropertyChanged(nameof(ChecksumMatchStatusText));
             return;
         }
 
-        bool match = string.Equals(CalculatedChecksum.Trim(), ExpectedChecksumInput.Trim(), StringComparison.OrdinalIgnoreCase);
+        var input = ExpectedChecksumInput.Trim();
+        bool match = string.Equals(InspectedItem.ChecksumSha256, input, StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(InspectedItem.ChecksumSha1, input, StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(InspectedItem.ChecksumMd5, input, StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(InspectedItem.ChecksumSha512, input, StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(InspectedItem.ChecksumCrc32, input, StringComparison.OrdinalIgnoreCase);
+
         ChecksumMatchResult = match;
         OnPropertyChanged(nameof(ChecksumMatchStatusText));
     }
@@ -739,6 +776,14 @@ public partial class MainViewModel : ViewModelBase
             ExpectedChecksumInput = text.Trim();
             VerifyChecksumMatch();
         }
+    }
+
+    [RelayCommand]
+    private async Task CopyTextAsync(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return;
+        await _clipboardService.SetTextAsync(text);
+        ShowNotification("Copied to clipboard!");
     }
 
     // Floating Mini Widget

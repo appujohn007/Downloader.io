@@ -8,6 +8,7 @@ using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -154,6 +155,7 @@ public class DownloadService : IDownloadService
             Logger.Debug($"[METADATA] Probing headers for: {url}");
 
             HttpResponseMessage? response = null;
+            var sw = Stopwatch.StartNew();
 
             // 1. Try HEAD request first with full browser emulation
             try
@@ -175,8 +177,53 @@ public class DownloadService : IDownloadService
                 response = await HttpClient.SendAsync(getReq, HttpCompletionOption.ResponseHeadersRead, ct);
             }
 
+            sw.Stop();
+            meta.TtfbMs = sw.Elapsed.TotalMilliseconds;
+
             using (response)
             {
+                meta.HttpProtocol = $"HTTP/{response.Version.Major}.{response.Version.Minor}";
+                if (response.Headers.Server != null)
+                    meta.Server = response.Headers.Server.ToString();
+                if (response.Headers.ETag != null)
+                    meta.ETag = response.Headers.ETag.Tag;
+                if (response.Content.Headers.LastModified.HasValue)
+                    meta.LastModified = response.Content.Headers.LastModified.Value.ToString("yyyy-MM-dd HH:mm:ss 'UTC'");
+                if (response.Headers.AcceptRanges.Any())
+                    meta.AcceptRanges = string.Join(", ", response.Headers.AcceptRanges);
+                if (response.Content.Headers.ContentEncoding.Any())
+                    meta.ContentEncoding = string.Join(", ", response.Content.Headers.ContentEncoding);
+
+                // CDN Detection
+                if (response.Headers.TryGetValues("cf-ray", out var cfRayVals))
+                {
+                    meta.CdnProvider = "Cloudflare Edge";
+                    meta.CdnRayId = string.Join(", ", cfRayVals);
+                }
+                else if (response.Headers.TryGetValues("x-amz-cf-id", out var amzVals))
+                {
+                    meta.CdnProvider = "AWS CloudFront";
+                    meta.CdnRayId = string.Join(", ", amzVals);
+                }
+                else if (response.Headers.TryGetValues("x-served-by", out var fastlyVals))
+                {
+                    meta.CdnProvider = "Fastly Edge";
+                    meta.CdnRayId = string.Join(", ", fastlyVals);
+                }
+                else if (response.Headers.TryGetValues("x-akamai-transformed", out _))
+                {
+                    meta.CdnProvider = "Akamai CDN";
+                }
+
+                // Raw Headers Dump
+                var sbResp = new StringBuilder();
+                sbResp.AppendLine($"HTTP/{response.Version.Major}.{response.Version.Minor} {(int)response.StatusCode} {response.ReasonPhrase}");
+                foreach (var h in response.Headers)
+                    sbResp.AppendLine($"{h.Key}: {string.Join(", ", h.Value)}");
+                foreach (var h in response.Content.Headers)
+                    sbResp.AppendLine($"{h.Key}: {string.Join(", ", h.Value)}");
+                meta.ResponseHeadersText = sbResp.ToString();
+
                 if (response.Content.Headers.ContentType?.MediaType != null)
                 {
                     meta.ContentType = response.Content.Headers.ContentType.MediaType;
@@ -332,6 +379,18 @@ public class DownloadService : IDownloadService
             {
                 item.TotalBytes = meta.FileSize;
             }
+            item.HttpProtocol = meta.HttpProtocol;
+            item.ServerSoftware = meta.Server;
+            item.ETag = meta.ETag;
+            item.LastModifiedHeader = meta.LastModified;
+            item.AcceptRangesHeader = meta.AcceptRanges;
+            item.ContentEncodingHeader = meta.ContentEncoding;
+            item.CdnProvider = meta.CdnProvider;
+            item.CdnRayId = meta.CdnRayId;
+            item.TtfbMs = meta.TtfbMs;
+            item.MimeType = meta.ContentType;
+            item.ResponseHeadersText = meta.ResponseHeadersText;
+
             if (!string.IsNullOrWhiteSpace(meta.ContentType))
             {
                 item.ServerHeadersSummary = $"Type: {meta.ContentType} | Host: {meta.Domain} | Resumable: {(meta.IsResumable ? "Yes" : "No")}";
@@ -367,6 +426,39 @@ public class DownloadService : IDownloadService
             item.CompletedAt = DateTime.Now;
             item.SpeedBytesPerSec = 0;
             item.ProgressPercentage = 100;
+
+            // Deep Type-Aware File Intelligence
+            var insp = FileInspectionService.InspectFile(targetFilePath);
+            item.MagicBytesHex = insp.MagicBytesHex;
+            item.MagicByteType = insp.MagicByteType;
+            item.TypeSpecificDetails = insp.TypeSpecificDetails;
+            item.TargetStorageInfo = insp.StorageDriveInfo;
+
+            // Background compute all multi-hashes and check ETag
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    var hashes = await FileInspectionService.ComputeAllHashesAsync(targetFilePath);
+                    item.ChecksumSha256 = hashes.Sha256;
+                    item.ChecksumSha1 = hashes.Sha1;
+                    item.ChecksumMd5 = hashes.Md5;
+                    item.ChecksumSha512 = hashes.Sha512;
+                    item.ChecksumCrc32 = hashes.Crc32;
+
+                    if (!string.IsNullOrEmpty(item.ETag))
+                    {
+                        var cleanEtag = item.ETag.Trim('"', 'W', '/', ' ');
+                        if (string.Equals(cleanEtag, hashes.Md5, StringComparison.OrdinalIgnoreCase) ||
+                            string.Equals(cleanEtag, hashes.Sha256, StringComparison.OrdinalIgnoreCase))
+                        {
+                            item.IsChecksumMatched = true;
+                        }
+                    }
+                }
+                catch { }
+            });
+
             UpdateUi(item);
 
             _audioNotificationService.PlayDownloadCompleted();

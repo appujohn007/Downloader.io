@@ -94,6 +94,78 @@ public partial class DownloadItem : ObservableObject
     [ObservableProperty]
     private int _retryAttempts = 0;
 
+    // Network & Protocol Telemetry
+    [ObservableProperty]
+    private string _httpProtocol = "HTTP/1.1";
+
+    [ObservableProperty]
+    private string _tlsCipher = "TLS 1.3";
+
+    [ObservableProperty]
+    private double _ttfbMs = 0.0;
+
+    [ObservableProperty]
+    private double _peakSpeedBytesPerSec = 0.0;
+
+    [ObservableProperty]
+    private double _averageSpeedBytesPerSec = 0.0;
+
+    [ObservableProperty]
+    private string _cdnProvider = "Direct Origin";
+
+    [ObservableProperty]
+    private string _cdnRayId = string.Empty;
+
+    [ObservableProperty]
+    private string _serverSoftware = string.Empty;
+
+    [ObservableProperty]
+    private string _mimeType = string.Empty;
+
+    [ObservableProperty]
+    private string _eTag = string.Empty;
+
+    [ObservableProperty]
+    private string _lastModifiedHeader = string.Empty;
+
+    [ObservableProperty]
+    private string _acceptRangesHeader = string.Empty;
+
+    [ObservableProperty]
+    private string _contentEncodingHeader = string.Empty;
+
+    [ObservableProperty]
+    private string _requestHeadersText = string.Empty;
+
+    [ObservableProperty]
+    private string _responseHeadersText = string.Empty;
+
+    [ObservableProperty]
+    private double _activeDurationSeconds = 0.0;
+
+    // File Intelligence & Magic Bytes
+    [ObservableProperty]
+    private string _magicBytesHex = string.Empty;
+
+    [ObservableProperty]
+    private string _magicByteType = string.Empty;
+
+    [ObservableProperty]
+    private string _typeSpecificDetails = string.Empty;
+
+    [ObservableProperty]
+    private string _targetStorageInfo = string.Empty;
+
+    // Cryptographic Hashes
+    [ObservableProperty]
+    private string? _checksumSha1;
+
+    [ObservableProperty]
+    private string? _checksumSha512;
+
+    [ObservableProperty]
+    private string? _checksumCrc32;
+
     public ObservableCollection<DownloadSegment> Segments { get; set; } = new();
 
     [JsonIgnore]
@@ -182,6 +254,35 @@ public partial class DownloadItem : ObservableObject
             if (timeSpan.TotalMinutes >= 1)
                 return $"{timeSpan.Minutes}m {timeSpan.Seconds}s left";
             return $"{timeSpan.Seconds}s left";
+        }
+    }
+
+    [JsonIgnore]
+    public string FormattedPeakSpeed => PeakSpeedBytesPerSec > 0 ? $"{FormatBytes((long)PeakSpeedBytesPerSec)}/s" : "-";
+
+    [JsonIgnore]
+    public string FormattedAverageSpeed => AverageSpeedBytesPerSec > 0 ? $"{FormatBytes((long)AverageSpeedBytesPerSec)}/s" : "-";
+
+    [JsonIgnore]
+    public string FormattedTtfb => TtfbMs > 0 ? $"{TtfbMs:F0} ms" : "-";
+
+    [JsonIgnore]
+    public string FormattedActiveDuration
+    {
+        get
+        {
+            if (ActiveDurationSeconds <= 0)
+            {
+                if (CompletedAt.HasValue && CreatedAt != default)
+                {
+                    var dur = CompletedAt.Value - CreatedAt;
+                    if (dur.TotalSeconds > 0)
+                        return dur.TotalMinutes >= 1 ? $"{(int)dur.TotalMinutes}m {dur.Seconds}s" : $"{dur.TotalSeconds:F1}s";
+                }
+                return "-";
+            }
+            var ts = TimeSpan.FromSeconds(ActiveDurationSeconds);
+            return ts.TotalMinutes >= 1 ? $"{(int)ts.TotalMinutes}m {ts.Seconds}s" : $"{ts.TotalSeconds:F1}s";
         }
     }
 
