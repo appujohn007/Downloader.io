@@ -605,6 +605,8 @@ public class DownloadService : IDownloadService
 
         var tasks = new List<Task>();
 
+        var throttler = new BandwidthThrottler(() => item.SpeedCapBytesPerSec > 0 ? item.SpeedCapBytesPerSec : _settingsService.CurrentSettings.GlobalSpeedLimitBytesPerSec);
+
         // 3. Open file stream for non-blocking concurrent writes
         using (var fileStream = new FileStream(partialFilePath, FileMode.Open, FileAccess.Write, FileShare.ReadWrite, 81920, useAsync: true))
         {
@@ -662,22 +664,14 @@ public class DownloadService : IDownloadService
                             {
                                 await RandomAccess.WriteAsync(fileHandle, buffer.AsMemory(0, read), currentOffset, ct);
                                 currentOffset += read;
-                                seg.DownloadedBytes += read;
+                                seg.SetDownloadedBytesDirect(seg.DownloadedBytes + read);
                                 segBytesSinceSample += read;
 
                                 Interlocked.Add(ref aggregateBytesDownloaded, read);
                                 Interlocked.Add(ref bytesSinceLastSample, read);
 
-                                // Speed limiter throttling
-                                long limit = item.SpeedCapBytesPerSec > 0 ? item.SpeedCapBytesPerSec : _settingsService.CurrentSettings.GlobalSpeedLimitBytesPerSec;
-                                if (limit > 0)
-                                {
-                                    long allowedChunk = limit / threadCount;
-                                    if (allowedChunk > 0 && segBytesSinceSample >= allowedChunk)
-                                    {
-                                        await Task.Delay(15, ct);
-                                    }
-                                }
+                                // Smooth Token-Bucket Speed Limiter Throttling
+                                await throttler.ThrottleAsync(read, ct);
 
                                 if (segSpeedTimer.ElapsedMilliseconds >= 300)
                                 {
@@ -914,6 +908,8 @@ public class DownloadService : IDownloadService
 
         UpdateUi(item);
 
+        var throttler = new BandwidthThrottler(() => item.SpeedCapBytesPerSec > 0 ? item.SpeedCapBytesPerSec : _settingsService.CurrentSettings.GlobalSpeedLimitBytesPerSec);
+
         using (var contentStream = await response.Content.ReadAsStreamAsync(ct))
         {
             using (var fileStream = new FileStream(
@@ -939,6 +935,9 @@ public class DownloadService : IDownloadService
 
                     currentDownloadedBytes += bytesRead;
                     bytesSinceLastSample += bytesRead;
+
+                    // Smooth Token-Bucket Speed Limiter Throttling
+                    await throttler.ThrottleAsync(bytesRead, ct);
 
                     if (speedSampleTimer.ElapsedMilliseconds >= 250)
                     {
@@ -1010,7 +1009,43 @@ public class DownloadService : IDownloadService
         {
             Logger.Info($"[AUTO-EXTRACT] Extracting '{archivePath}' to '{destinationDirectory}'");
             Directory.CreateDirectory(destinationDirectory);
-            await Task.Run(() => ZipFile.ExtractToDirectory(archivePath, destinationDirectory, overwriteFiles: true), ct);
+            var fullDestDir = Path.GetFullPath(destinationDirectory);
+            if (!fullDestDir.EndsWith(Path.DirectorySeparatorChar.ToString(), StringComparison.Ordinal))
+            {
+                fullDestDir += Path.DirectorySeparatorChar;
+            }
+
+            await Task.Run(() =>
+            {
+                using var archive = ZipFile.OpenRead(archivePath);
+                foreach (var entry in archive.Entries)
+                {
+                    ct.ThrowIfCancellationRequested();
+                    var entryDestPath = Path.GetFullPath(Path.Combine(destinationDirectory, entry.FullName));
+
+                    // Zip Slip Path Traversal Protection
+                    if (!entryDestPath.StartsWith(fullDestDir, StringComparison.OrdinalIgnoreCase))
+                    {
+                        Logger.Warn($"[SECURITY] Skipped archive entry '{entry.FullName}' due to path traversal attempt.");
+                        continue;
+                    }
+
+                    if (string.IsNullOrEmpty(entry.Name) || entryDestPath.EndsWith(Path.DirectorySeparatorChar.ToString()))
+                    {
+                        Directory.CreateDirectory(entryDestPath);
+                    }
+                    else
+                    {
+                        var entryDir = Path.GetDirectoryName(entryDestPath);
+                        if (!string.IsNullOrEmpty(entryDir) && !Directory.Exists(entryDir))
+                        {
+                            Directory.CreateDirectory(entryDir);
+                        }
+                        entry.ExtractToFile(entryDestPath, overwrite: true);
+                    }
+                }
+            }, ct);
+
             Logger.Success($"[AUTO-EXTRACT] Successfully extracted archive to '{destinationDirectory}'");
             return true;
         }
@@ -1059,5 +1094,56 @@ public class DownloadService : IDownloadService
         {
             item.NotifyProgressChanged();
         });
+    }
+}
+
+/// <summary>
+/// High-precision Token-Bucket Bandwidth Throttler with microsecond replenishment
+/// and burst limiting to guarantee smooth, non-jittery throughput.
+/// </summary>
+public class BandwidthThrottler
+{
+    private readonly Func<long> _getLimitBytesPerSec;
+    private long _tokens;
+    private long _lastRefillTicks;
+    private readonly object _lock = new();
+
+    public BandwidthThrottler(Func<long> getLimitBytesPerSec)
+    {
+        _getLimitBytesPerSec = getLimitBytesPerSec;
+        _lastRefillTicks = Stopwatch.GetTimestamp();
+        _tokens = 0;
+    }
+
+    public async ValueTask ThrottleAsync(int bytesToWrite, CancellationToken ct = default)
+    {
+        long limit = _getLimitBytesPerSec();
+        if (limit <= 0) return;
+
+        double delayMs = 0;
+        lock (_lock)
+        {
+            long now = Stopwatch.GetTimestamp();
+            double elapsedSeconds = (double)(now - _lastRefillTicks) / Stopwatch.Frequency;
+            _lastRefillTicks = now;
+
+            // Replenish tokens based on elapsed duration
+            _tokens += (long)(elapsedSeconds * limit);
+            long maxBurst = Math.Max(65536, limit / 5); // 200ms burst ceiling
+            if (_tokens > maxBurst) _tokens = maxBurst;
+
+            _tokens -= bytesToWrite;
+
+            if (_tokens < 0)
+            {
+                delayMs = (-_tokens * 1000.0) / limit;
+            }
+        }
+
+        if (delayMs > 1.0)
+        {
+            int delay = (int)Math.Min(delayMs, 500);
+            await Task.Delay(delay, ct).ConfigureAwait(false);
+        }
     }
 }

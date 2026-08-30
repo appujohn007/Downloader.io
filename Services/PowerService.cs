@@ -36,6 +36,26 @@ public class PowerService : IPowerService
                             UseShellExecute = false
                         });
                     }
+                    else if (OperatingSystem.IsLinux())
+                    {
+                        Process.Start(new ProcessStartInfo
+                        {
+                            FileName = "systemctl",
+                            Arguments = "poweroff",
+                            CreateNoWindow = true,
+                            UseShellExecute = false
+                        });
+                    }
+                    else if (OperatingSystem.IsMacOS())
+                    {
+                        Process.Start(new ProcessStartInfo
+                        {
+                            FileName = "osascript",
+                            Arguments = "-e 'tell app \"System Events\" to shut down'",
+                            CreateNoWindow = true,
+                            UseShellExecute = false
+                        });
+                    }
                     break;
 
                 case PostDownloadAction.Sleep:
@@ -43,12 +63,42 @@ public class PowerService : IPowerService
                     {
                         SetSuspendState(false, true, false);
                     }
+                    else if (OperatingSystem.IsLinux())
+                    {
+                        Process.Start(new ProcessStartInfo
+                        {
+                            FileName = "systemctl",
+                            Arguments = "suspend",
+                            CreateNoWindow = true,
+                            UseShellExecute = false
+                        });
+                    }
+                    else if (OperatingSystem.IsMacOS())
+                    {
+                        Process.Start(new ProcessStartInfo
+                        {
+                            FileName = "pmset",
+                            Arguments = "sleepnow",
+                            CreateNoWindow = true,
+                            UseShellExecute = false
+                        });
+                    }
                     break;
 
                 case PostDownloadAction.Hibernate:
                     if (OperatingSystem.IsWindows())
                     {
                         SetSuspendState(true, true, false);
+                    }
+                    else if (OperatingSystem.IsLinux())
+                    {
+                        Process.Start(new ProcessStartInfo
+                        {
+                            FileName = "systemctl",
+                            Arguments = "hibernate",
+                            CreateNoWindow = true,
+                            UseShellExecute = false
+                        });
                     }
                     break;
             }

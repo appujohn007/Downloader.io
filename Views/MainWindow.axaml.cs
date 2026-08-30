@@ -43,9 +43,14 @@ public partial class MainWindow : Window
     {
         base.OnKeyDown(e);
 
-        // Global Ctrl+V hotkey from homepage
+        // In-app Ctrl+V hotkey to paste and add download task
         if (e.KeyModifiers.HasFlag(KeyModifiers.Control) && e.Key == Key.V)
         {
+            if (FocusManager?.GetFocusedElement() is TextBox)
+            {
+                return;
+            }
+
             if (DataContext is MainViewModel vm && !vm.IsAddModalOpen)
             {
                 e.Handled = true;

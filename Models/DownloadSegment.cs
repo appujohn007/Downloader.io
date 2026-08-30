@@ -73,6 +73,11 @@ public partial class DownloadSegment : ObservableObject
     [JsonIgnore]
     public string StatusText => IsCompleted ? "Finished" : (IsActive ? "Downloading" : "Connecting");
 
+    public void SetDownloadedBytesDirect(long bytes)
+    {
+        DownloadedBytes = bytes;
+    }
+
     public void UpdateMetrics(long downloaded, double speed)
     {
         DownloadedBytes = downloaded;

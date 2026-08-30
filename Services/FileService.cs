@@ -19,12 +19,23 @@ public class FileService : IFileService
 
         try
         {
-            var psi = new ProcessStartInfo
+            if (OperatingSystem.IsWindows())
             {
-                FileName = filePath,
-                UseShellExecute = true
-            };
-            Process.Start(psi);
+                var psi = new ProcessStartInfo
+                {
+                    FileName = filePath,
+                    UseShellExecute = true
+                };
+                Process.Start(psi);
+            }
+            else if (OperatingSystem.IsMacOS())
+            {
+                Process.Start("open", $"\"{filePath}\"");
+            }
+            else if (OperatingSystem.IsLinux())
+            {
+                Process.Start("xdg-open", $"\"{filePath}\"");
+            }
         }
         catch (Exception ex)
         {
@@ -36,20 +47,36 @@ public class FileService : IFileService
     {
         try
         {
-            if (File.Exists(filePath))
+            var targetFile = File.Exists(filePath) ? filePath : (File.Exists($"{filePath}.downloaderio") ? $"{filePath}.downloaderio" : null);
+            var dir = !string.IsNullOrEmpty(targetFile) ? Path.GetDirectoryName(targetFile) : (Directory.Exists(filePath) ? filePath : Path.GetDirectoryName(filePath));
+
+            if (OperatingSystem.IsWindows())
             {
-                Process.Start("explorer.exe", $"/select,\"{filePath}\"");
-            }
-            else if (File.Exists($"{filePath}.downloaderio"))
-            {
-                Process.Start("explorer.exe", $"/select,\"{filePath}.downloaderio\"");
-            }
-            else
-            {
-                var dir = Directory.Exists(filePath) ? filePath : Path.GetDirectoryName(filePath);
-                if (!string.IsNullOrEmpty(dir) && Directory.Exists(dir))
+                if (!string.IsNullOrEmpty(targetFile))
+                {
+                    Process.Start("explorer.exe", $"/select,\"{targetFile}\"");
+                }
+                else if (!string.IsNullOrEmpty(dir) && Directory.Exists(dir))
                 {
                     Process.Start("explorer.exe", $"\"{dir}\"");
+                }
+            }
+            else if (OperatingSystem.IsMacOS())
+            {
+                if (!string.IsNullOrEmpty(targetFile))
+                {
+                    Process.Start("open", $"-R \"{targetFile}\"");
+                }
+                else if (!string.IsNullOrEmpty(dir) && Directory.Exists(dir))
+                {
+                    Process.Start("open", $"\"{dir}\"");
+                }
+            }
+            else if (OperatingSystem.IsLinux())
+            {
+                if (!string.IsNullOrEmpty(dir) && Directory.Exists(dir))
+                {
+                    Process.Start("xdg-open", $"\"{dir}\"");
                 }
             }
         }

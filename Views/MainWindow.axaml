@@ -951,7 +951,6 @@
                     <StackPanel Spacing="8">
                         <CheckBox IsChecked="{Binding IsSmartFolderRoutingEnabled}" Content="Smart Folder Routing (Auto-sort Archives, Media, Software)" FontSize="11" />
                         <CheckBox IsChecked="{Binding IsAutoExtractZipEnabled}" Content="Auto-Extract ZIP archives upon download completion" FontSize="11" />
-                        <CheckBox IsChecked="{Binding IsClipboardSnifferEnabled}" Content="Clipboard Sniffer (Prompt when downloadable links are copied)" FontSize="11" />
                         <CheckBox IsChecked="{Binding IsSoundEnabled}" Content="Play subtle sound cues on download complete / error" FontSize="11" />
                     </StackPanel>
 

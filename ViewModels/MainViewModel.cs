@@ -287,13 +287,6 @@ public partial class MainViewModel : ViewModelBase
             Application.Current.RequestedThemeVariant = IsDarkMode ? ThemeVariant.Dark : ThemeVariant.Light;
         }
 
-        // Sniffer Event
-        _snifferService.DownloadableUrlDetected += OnSnifferUrlDetected;
-        if (_settings.IsClipboardSnifferEnabled)
-        {
-            _snifferService.Start();
-        }
-
         // Stats Refresh Timer
         _statsTimer = new DispatcherTimer
         {
@@ -867,15 +860,6 @@ public partial class MainViewModel : ViewModelBase
         _settings.CustomUserAgent = CustomUserAgent;
 
         _settingsService.SaveSettings(_settings);
-
-        if (IsClipboardSnifferEnabled && !_snifferService.IsRunning)
-        {
-            _snifferService.Start();
-        }
-        else if (!IsClipboardSnifferEnabled && _snifferService.IsRunning)
-        {
-            _snifferService.Stop();
-        }
 
         IsSettingsOpen = false;
         ShowNotification("Settings updated successfully");

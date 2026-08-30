@@ -36,6 +36,14 @@ public class AudioNotificationService : IAudioNotificationService
                     // MB_ICONASTERISK = 0x00000040L
                     MessageBeep(0x00000040);
                 }
+                else
+                {
+                    try
+                    {
+                        Console.Write("\a");
+                    }
+                    catch { }
+                }
             });
         }
         catch
@@ -57,6 +65,14 @@ public class AudioNotificationService : IAudioNotificationService
                 {
                     // MB_ICONHAND = 0x00000010L
                     MessageBeep(0x00000010);
+                }
+                else
+                {
+                    try
+                    {
+                        Console.Write("\a");
+                    }
+                    catch { }
                 }
             });
         }
