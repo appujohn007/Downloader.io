@@ -113,6 +113,38 @@ public partial class MainViewModel : ViewModelBase
     [ObservableProperty]
     private bool _hasNotification;
 
+    // Sidebar Collapse
+    [ObservableProperty]
+    private bool _isSidebarCollapsed = false;
+
+    // Analytics & Network Telemetry Modal
+    [ObservableProperty]
+    private bool _isAnalyticsModalOpen = false;
+
+    [ObservableProperty]
+    private double _sessionPeakSpeed = 0.0;
+
+    [ObservableProperty]
+    private long _sessionTotalBytes = 0;
+
+    [ObservableProperty]
+    private int _activeConnectionsCount = 0;
+
+    [ObservableProperty]
+    private DateTime _sessionStartTime = DateTime.Now;
+
+    [ObservableProperty]
+    private string _formattedPeakSpeed = "0 B/s";
+
+    [ObservableProperty]
+    private string _formattedTotalTransferred = "0 B";
+
+    [ObservableProperty]
+    private string _formattedAverageSpeed = "0 B/s";
+
+    [ObservableProperty]
+    private string _sessionDurationFormatted = "00:00:00";
+
     // Speed Limiter
     [ObservableProperty]
     private int _selectedSpeedCapIndex = 0; // 0: Unlimited, 1: 10MB/s, 2: 5MB/s, 3: 2MB/s, 4: 500KB/s
@@ -424,6 +456,36 @@ public partial class MainViewModel : ViewModelBase
         TotalOtherCount = other;
         CurrentAggregateSpeed = totalSpeed;
         TotalDownloadSpeedFormatted = totalSpeed > 0 ? $"{DownloadItem.FormatBytes((long)totalSpeed)}/s" : "0 B/s";
+
+        // Update real-time session telemetry
+        if (totalSpeed > SessionPeakSpeed)
+        {
+            SessionPeakSpeed = totalSpeed;
+            FormattedPeakSpeed = $"{DownloadItem.FormatBytes((long)SessionPeakSpeed)}/s";
+        }
+
+        if (totalSpeed > 0)
+        {
+            SessionTotalBytes += (long)(totalSpeed * 0.5); // 500ms interval
+            FormattedTotalTransferred = DownloadItem.FormatBytes(SessionTotalBytes);
+        }
+
+        var duration = DateTime.Now - SessionStartTime;
+        SessionDurationFormatted = $"{(int)duration.TotalHours:00}:{duration.Minutes:00}:{duration.Seconds:00}";
+
+        double totalSecs = Math.Max(1.0, duration.TotalSeconds);
+        double avgSpeed = (double)SessionTotalBytes / totalSecs;
+        FormattedAverageSpeed = $"{DownloadItem.FormatBytes((long)avgSpeed)}/s";
+
+        int activeThreads = 0;
+        foreach (var d in AllDownloads)
+        {
+            if (d.IsActive)
+            {
+                activeThreads += d.Segments?.Count(s => s.IsActive || !s.IsCompleted) ?? 1;
+            }
+        }
+        ActiveConnectionsCount = activeThreads;
 
         // Periodic debounced auto-save during active downloads
         if (active > 0 && (DateTime.Now - _lastSavedTime).TotalSeconds >= 4)
@@ -946,6 +1008,37 @@ public partial class MainViewModel : ViewModelBase
         OnPropertyChanged(nameof(IsMediaSelected));
         OnPropertyChanged(nameof(IsDocumentsSelected));
         OnPropertyChanged(nameof(IsOtherSelected));
+    }
+
+    [RelayCommand]
+    private void ToggleSidebar()
+    {
+        IsSidebarCollapsed = !IsSidebarCollapsed;
+    }
+
+    [RelayCommand]
+    private void ToggleAnalyticsModal()
+    {
+        IsAnalyticsModalOpen = !IsAnalyticsModalOpen;
+    }
+
+    [RelayCommand]
+    private void CloseAnalyticsModal()
+    {
+        IsAnalyticsModalOpen = false;
+    }
+
+    [RelayCommand]
+    private void ResetSessionStats()
+    {
+        SessionPeakSpeed = 0.0;
+        SessionTotalBytes = 0;
+        SessionStartTime = DateTime.Now;
+        FormattedPeakSpeed = "0 B/s";
+        FormattedTotalTransferred = "0 B";
+        FormattedAverageSpeed = "0 B/s";
+        SessionDurationFormatted = "00:00:00";
+        ShowNotification("Session telemetry stats reset.");
     }
 
     private void ShowNotification(string message)

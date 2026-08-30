@@ -29,35 +29,51 @@
                 BorderBrush="{DynamicResource BorderBrushCustom}"
                 BorderThickness="0,0,0,1">
             <Grid ColumnDefinitions="Auto, *, Auto, Auto">
-                <!-- App Title / Logo -->
-                <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center" Margin="14,0,0,0">
-                    <Ellipse Width="8" Height="8" Fill="{DynamicResource AccentBrush}" VerticalAlignment="Center" />
+                <!-- App Title / Logo & Sidebar Toggle -->
+                <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center" Margin="12,0,0,0">
+                    <Button Classes="ghost-btn" Command="{Binding ToggleSidebarCommand}" ToolTip.Tip="Toggle Sidebar (Expand / Collapse)" Padding="4">
+                        <PathIcon Width="11" Height="11" Foreground="{DynamicResource TextSecondaryBrush}" Data="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z" />
+                    </Button>
+                    <Ellipse Width="8" Height="8" Fill="{DynamicResource AccentBrush}" VerticalAlignment="Center" Margin="4,0,0,0" />
                     <TextBlock Text="downloader.io" FontWeight="SemiBold" FontSize="12" Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center" />
                 </StackPanel>
 
-                <!-- Center Real-time Rolling Speed Waveform Chart -->
-                <Grid Grid.Column="1" Margin="24,3,24,3" VerticalAlignment="Stretch">
-                    <controls:SpeedWaveformControl CurrentSpeed="{Binding CurrentAggregateSpeed}"
-                                                   IsDarkMode="{Binding IsDarkMode}"
-                                                   HorizontalAlignment="Stretch"
-                                                   VerticalAlignment="Stretch"
-                                                   Opacity="0.85" />
-                    <!-- Center Speed Readout Overlay -->
-                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="6"
-                                IsVisible="{Binding TotalActiveCount}">
-                        <Ellipse Width="6" Height="6" Fill="{DynamicResource AccentBrush}" VerticalAlignment="Center" Classes="pulse-dot" Margin="0,0,4,0" />
-                        <TextBlock Text="{Binding TotalDownloadSpeedFormatted, StringFormat='{}↓ {0}'}" 
-                                   FontSize="11" 
-                                   FontWeight="SemiBold" 
-                                   Foreground="{DynamicResource AccentBrush}" 
-                                   VerticalAlignment="Center" />
-                        <TextBlock Text="•" FontSize="10" Foreground="{DynamicResource TextMutedBrush}" Margin="2,0" VerticalAlignment="Center" />
-                        <TextBlock Text="{Binding TotalActiveCount, StringFormat='{}{0} active'}" 
-                                   FontSize="11" 
-                                   Foreground="{DynamicResource TextSecondaryBrush}" 
-                                   VerticalAlignment="Center" />
-                    </StackPanel>
-                </Grid>
+                <!-- Center Real-time Rolling Speed Waveform Chart (Clickable for Analytics) -->
+                <Button Grid.Column="1"
+                        Command="{Binding ToggleAnalyticsModalCommand}"
+                        Background="Transparent"
+                        BorderThickness="0"
+                        Padding="0"
+                        Margin="18,2,18,2"
+                        HorizontalAlignment="Stretch"
+                        VerticalAlignment="Stretch"
+                        HorizontalContentAlignment="Stretch"
+                        VerticalContentAlignment="Stretch"
+                        Cursor="Hand"
+                        ToolTip.Tip="Click to view Real-time Network Analytics &amp; Performance Telemetry">
+                    <Grid>
+                        <controls:SpeedWaveformControl CurrentSpeed="{Binding CurrentAggregateSpeed}"
+                                                       IsDarkMode="{Binding IsDarkMode}"
+                                                       HorizontalAlignment="Stretch"
+                                                       VerticalAlignment="Stretch"
+                                                       Opacity="0.85" />
+                        <!-- Center Speed Readout Overlay -->
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="6"
+                                    IsVisible="{Binding TotalActiveCount}">
+                            <Ellipse Width="6" Height="6" Fill="{DynamicResource AccentBrush}" VerticalAlignment="Center" Classes="pulse-dot" Margin="0,0,4,0" />
+                            <TextBlock Text="{Binding TotalDownloadSpeedFormatted, StringFormat='{}↓ {0}'}" 
+                                       FontSize="11" 
+                                       FontWeight="SemiBold" 
+                                       Foreground="{DynamicResource AccentBrush}" 
+                                       VerticalAlignment="Center" />
+                            <TextBlock Text="•" FontSize="10" Foreground="{DynamicResource TextMutedBrush}" Margin="2,0" VerticalAlignment="Center" />
+                            <TextBlock Text="{Binding TotalActiveCount, StringFormat='{}{0} active'}" 
+                                       FontSize="11" 
+                                       Foreground="{DynamicResource TextSecondaryBrush}" 
+                                       VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Grid>
+                </Button>
 
                 <!-- Speed Limiter & Tools Toolbar -->
                 <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center" Margin="0,0,8,0">
@@ -114,9 +130,13 @@
         </Border>
 
         <!-- ================= MAIN WORKSPACE ================= -->
-        <Grid Grid.Row="1" ColumnDefinitions="210, *">
+        <Grid Grid.Row="1" ColumnDefinitions="Auto, Auto, *">
             <!-- ================= LEFT SIDEBAR ================= -->
             <Border Grid.Column="0"
+                    IsVisible="{Binding !IsSidebarCollapsed}"
+                    Width="210"
+                    MinWidth="160"
+                    MaxWidth="380"
                     Background="{DynamicResource SidebarBgBrush}"
                     BorderBrush="{DynamicResource BorderBrushCustom}"
                     BorderThickness="0,0,1,0"
@@ -258,17 +278,36 @@
                 </Grid>
             </Border>
 
+            <!-- Adjustable Width Grid Splitter -->
+            <GridSplitter Grid.Column="1"
+                          Width="3"
+                          IsVisible="{Binding !IsSidebarCollapsed}"
+                          Background="Transparent"
+                          ResizeDirection="Columns"
+                          ShowsPreview="False" />
+
             <!-- ================= MAIN CONTENT LIST ================= -->
-            <Grid Grid.Column="1" RowDefinitions="Auto, *">
+            <Grid Grid.Column="2" RowDefinitions="Auto, *">
                 <!-- Search & Action Bar -->
                 <Border Grid.Row="0"
                         Background="{DynamicResource AppBgBrush}"
                         BorderBrush="{DynamicResource BorderBrushCustom}"
                         BorderThickness="0,0,0,1"
                         Padding="16,10">
-                    <Grid ColumnDefinitions="*, Auto">
+                    <Grid ColumnDefinitions="Auto, *, Auto">
+                        <!-- Expand Sidebar Button (when collapsed) -->
+                        <Button Grid.Column="0"
+                                Classes="ghost-btn"
+                                Command="{Binding ToggleSidebarCommand}"
+                                ToolTip.Tip="Expand Sidebar"
+                                Padding="6,4"
+                                Margin="0,0,8,0"
+                                IsVisible="{Binding IsSidebarCollapsed}">
+                            <PathIcon Width="11" Height="11" Foreground="{DynamicResource TextSecondaryBrush}" Data="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z" />
+                        </Button>
+
                         <!-- Search Box -->
-                        <TextBox Grid.Column="0"
+                        <TextBox Grid.Column="1"
                                  Classes="minimal-input"
                                  Text="{Binding SearchQuery}"
                                  Watermark="Search downloads..."
@@ -276,7 +315,7 @@
                                  HorizontalAlignment="Left" />
 
                         <!-- Batch Action Controls -->
-                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4">
+                        <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4">
                             <Button Classes="ghost-btn" Command="{Binding ResumeAllCommand}" ToolTip.Tip="Resume All">
                                 <StackPanel Orientation="Horizontal" Spacing="4">
                                     <PathIcon Width="10" Height="10" Foreground="{DynamicResource TextSecondaryBrush}" Data="M8 5v14l11-7z" />
@@ -841,6 +880,126 @@
                         <TextBlock Grid.Column="0" Text="{Binding StatusMessage}" IsVisible="{Binding StatusMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" Foreground="{DynamicResource TextMutedBrush}" FontSize="11" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
                         <Button Grid.Column="1" Classes="ghost-btn" Command="{Binding CancelCommand}" Content="Cancel" Margin="0,0,6,0" Padding="12,6" />
                         <Button Grid.Column="2" Classes="primary-btn" Command="{Binding ConfirmCommand}" Content="Download" Padding="14,6" />
+                    </Grid>
+                </StackPanel>
+            </Border>
+        </Border>
+
+        <!-- ================= ANALYTICS & NETWORK TELEMETRY MODAL ================= -->
+        <Border Grid.Row="0" Grid.RowSpan="2"
+                IsVisible="{Binding IsAnalyticsModalOpen}"
+                Background="{DynamicResource ModalOverlayBrush}">
+            <Border Background="{DynamicResource CardBgBrush}"
+                    BorderBrush="{DynamicResource BorderBrushCustom}"
+                    BorderThickness="1"
+                    CornerRadius="10"
+                    Width="620"
+                    MaxHeight="600"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    Padding="22">
+                <StackPanel Spacing="16">
+                    <!-- Modal Header -->
+                    <Grid ColumnDefinitions="*, Auto">
+                        <StackPanel Grid.Column="0" Spacing="2">
+                            <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                <Ellipse Width="8" Height="8" Fill="{DynamicResource AccentBrush}" VerticalAlignment="Center" Classes="pulse-dot" />
+                                <TextBlock Text="Live Network Analytics &amp; Telemetry" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center" />
+                            </StackPanel>
+                            <TextBlock Text="Real-time multi-threaded bandwidth throughput &amp; engine diagnostics" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" />
+                        </StackPanel>
+                        <Button Grid.Column="1" Classes="ghost-btn" Command="{Binding CloseAnalyticsModalCommand}" Padding="4">
+                            <PathIcon Width="10" Height="10" Foreground="{DynamicResource TextSecondaryBrush}" Data="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
+                        </Button>
+                    </Grid>
+
+                    <!-- High-Resolution Real-time Speed Waveform -->
+                    <Border Background="{DynamicResource ChipBgBrush}"
+                            BorderBrush="{DynamicResource BorderBrushCustom}"
+                            BorderThickness="1"
+                            CornerRadius="8"
+                            Padding="12,10"
+                            Height="140">
+                        <Grid>
+                            <controls:SpeedWaveformControl CurrentSpeed="{Binding CurrentAggregateSpeed}"
+                                                           IsDarkMode="{Binding IsDarkMode}"
+                                                           HorizontalAlignment="Stretch"
+                                                           VerticalAlignment="Stretch" />
+                        </Grid>
+                    </Border>
+
+                    <!-- 4-Card Primary KPI Metrics Grid -->
+                    <Grid ColumnDefinitions="*, *, *, *">
+                        <Border Grid.Column="0" Background="{DynamicResource ChipBgBrush}" CornerRadius="6" Padding="10,8" Margin="0,0,3,0">
+                            <StackPanel Spacing="2">
+                                <TextBlock Text="CURRENT SPEED" FontSize="9" FontWeight="Bold" Foreground="{DynamicResource TextMutedBrush}" />
+                                <TextBlock Text="{Binding TotalDownloadSpeedFormatted}" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}" />
+                            </StackPanel>
+                        </Border>
+                        <Border Grid.Column="1" Background="{DynamicResource ChipBgBrush}" CornerRadius="6" Padding="10,8" Margin="3,0,3,0">
+                            <StackPanel Spacing="2">
+                                <TextBlock Text="PEAK SPEED" FontSize="9" FontWeight="Bold" Foreground="{DynamicResource TextMutedBrush}" />
+                                <TextBlock Text="{Binding FormattedPeakSpeed}" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" />
+                            </StackPanel>
+                        </Border>
+                        <Border Grid.Column="2" Background="{DynamicResource ChipBgBrush}" CornerRadius="6" Padding="10,8" Margin="3,0,3,0">
+                            <StackPanel Spacing="2">
+                                <TextBlock Text="AVERAGE RATE" FontSize="9" FontWeight="Bold" Foreground="{DynamicResource TextMutedBrush}" />
+                                <TextBlock Text="{Binding FormattedAverageSpeed}" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" />
+                            </StackPanel>
+                        </Border>
+                        <Border Grid.Column="3" Background="{DynamicResource ChipBgBrush}" CornerRadius="6" Padding="10,8" Margin="3,0,0,0">
+                            <StackPanel Spacing="2">
+                                <TextBlock Text="TRANSFERRED" FontSize="9" FontWeight="Bold" Foreground="{DynamicResource TextMutedBrush}" />
+                                <TextBlock Text="{Binding FormattedTotalTransferred}" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" />
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+
+                    <!-- Diagnostic Telemetry Details Panel -->
+                    <Border Background="{DynamicResource ChipBgBrush}"
+                            BorderBrush="{DynamicResource BorderBrushCustom}"
+                            BorderThickness="1"
+                            CornerRadius="8"
+                            Padding="12,10">
+                        <StackPanel Spacing="8">
+                            <TextBlock Text="ENGINE DIAGNOSTICS &amp; HARDWARE TELEMETRY" FontSize="9" FontWeight="Bold" Foreground="{DynamicResource TextMutedBrush}" />
+                            
+                            <Grid ColumnDefinitions="*, *">
+                                <StackPanel Grid.Column="0" Spacing="4">
+                                    <Grid ColumnDefinitions="Auto, *">
+                                        <TextBlock Grid.Column="0" Text="Session Uptime:" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" Width="120" />
+                                        <TextBlock Grid.Column="1" Text="{Binding SessionDurationFormatted}" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" />
+                                    </Grid>
+                                    <Grid ColumnDefinitions="Auto, *">
+                                        <TextBlock Grid.Column="0" Text="Active Worker Threads:" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" Width="120" />
+                                        <TextBlock Grid.Column="1" Text="{Binding ActiveConnectionsCount, StringFormat='{}{0} Concurrency Streams'}" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" />
+                                    </Grid>
+                                </StackPanel>
+
+                                <StackPanel Grid.Column="1" Spacing="4">
+                                    <Grid ColumnDefinitions="Auto, *">
+                                        <TextBlock Grid.Column="0" Text="Multi-Segment Engine:" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" Width="130" />
+                                        <TextBlock Grid.Column="1" Text="Adaptive Slicing Active" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}" />
+                                    </Grid>
+                                    <Grid ColumnDefinitions="Auto, *">
+                                        <TextBlock Grid.Column="0" Text="Checkpoint Resumption:" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" Width="130" />
+                                        <TextBlock Grid.Column="1" Text="Atomic Sidecar Sync" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" />
+                                    </Grid>
+                                </StackPanel>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Modal Actions Footer -->
+                    <Grid ColumnDefinitions="*, Auto, Auto" Margin="0,4,0,0">
+                        <Button Grid.Column="0" Classes="ghost-btn" Command="{Binding ResetSessionStatsCommand}" Padding="8,4" HorizontalAlignment="Left">
+                            <StackPanel Orientation="Horizontal" Spacing="4">
+                                <PathIcon Width="10" Height="10" Foreground="{DynamicResource TextSecondaryBrush}" Data="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z" />
+                                <TextBlock Text="Reset Counters" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" />
+                            </StackPanel>
+                        </Button>
+                        <Button Grid.Column="2" Classes="subtle-btn" Command="{Binding CloseAnalyticsModalCommand}" Content="Done" Padding="18,6" />
                     </Grid>
                 </StackPanel>
             </Border>
