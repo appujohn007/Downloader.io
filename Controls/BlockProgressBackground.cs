@@ -27,6 +27,12 @@ public class BlockProgressBackground : Control
     public static readonly StyledProperty<bool> IsCompletedProperty =
         AvaloniaProperty.Register<BlockProgressBackground, bool>(nameof(IsCompleted), false);
 
+    public static readonly StyledProperty<bool> IsFailedProperty =
+        AvaloniaProperty.Register<BlockProgressBackground, bool>(nameof(IsFailed), false);
+
+    public static readonly StyledProperty<string> ErrorMessageProperty =
+        AvaloniaProperty.Register<BlockProgressBackground, string>(nameof(ErrorMessage), string.Empty);
+
     public static readonly StyledProperty<int> PaletteIndexProperty =
         AvaloniaProperty.Register<BlockProgressBackground, int>(nameof(PaletteIndex), 0);
 
@@ -59,6 +65,8 @@ public class BlockProgressBackground : Control
             IsConnectingProperty,
             IsIndeterminateProperty,
             IsCompletedProperty,
+            IsFailedProperty,
+            ErrorMessageProperty,
             PaletteIndexProperty,
             CellSizeProperty,
             CellGapProperty,
@@ -104,6 +112,18 @@ public class BlockProgressBackground : Control
     {
         get => GetValue(IsCompletedProperty);
         set => SetValue(IsCompletedProperty, value);
+    }
+
+    public bool IsFailed
+    {
+        get => GetValue(IsFailedProperty);
+        set => SetValue(IsFailedProperty, value);
+    }
+
+    public string ErrorMessage
+    {
+        get => GetValue(ErrorMessageProperty);
+        set => SetValue(ErrorMessageProperty, value);
     }
 
     public int PaletteIndex
@@ -158,6 +178,7 @@ public class BlockProgressBackground : Control
         else if (change.Property == IsActiveProperty ||
                  change.Property == IsConnectingProperty ||
                  change.Property == IsIndeterminateProperty ||
+                 change.Property == IsFailedProperty ||
                  change.Property == SegmentsProperty)
         {
             EnsureTimerRunning();
@@ -166,7 +187,7 @@ public class BlockProgressBackground : Control
 
     private void EnsureTimerRunning()
     {
-        if (IsActive || IsConnecting || IsIndeterminate || Math.Abs(_animatedProgress - Progress) > 0.05)
+        if (IsActive || IsConnecting || IsIndeterminate || IsFailed || Math.Abs(_animatedProgress - Progress) > 0.05)
         {
             if (!_animTimer.IsEnabled)
             {
@@ -196,7 +217,7 @@ public class BlockProgressBackground : Control
             _animatedProgress = target;
         }
 
-        if (IsActive || IsConnecting || IsIndeterminate)
+        if (IsActive || IsConnecting || IsIndeterminate || IsFailed)
         {
             _animPhase += 0.06;
             if (_animPhase > Math.PI * 2000.0) _animPhase -= Math.PI * 2000.0;
@@ -207,7 +228,7 @@ public class BlockProgressBackground : Control
         {
             InvalidateVisual();
         }
-        else if (!IsConnecting && !IsIndeterminate && !IsActive && Math.Abs(_animatedProgress - target) <= 0.01)
+        else if (!IsConnecting && !IsIndeterminate && !IsActive && !IsFailed && Math.Abs(_animatedProgress - target) <= 0.01)
         {
             _animTimer.Stop();
         }
@@ -219,6 +240,15 @@ public class BlockProgressBackground : Control
 
         var bounds = Bounds;
         if (bounds.Width <= 1 || bounds.Height <= 1) return;
+
+        bool isLight = ActualThemeVariant == Avalonia.Styling.ThemeVariant.Light;
+
+        // When download failed, render stylish abstract cyber error artwork
+        if (IsFailed)
+        {
+            RenderFailedArtwork(context, bounds, isLight);
+            return;
+        }
 
         double gap = CellGap >= 0 ? CellGap : 2.5;
         double nominalSize = CellSize > 0 ? CellSize : 8.0;
@@ -237,8 +267,6 @@ public class BlockProgressBackground : Control
         int totalCells = cols * rows;
 
         var currentPalette = GetHarmonicPalette(PaletteIndex);
-
-        bool isLight = ActualThemeVariant == Avalonia.Styling.ThemeVariant.Light;
 
         IBrush emptyFillBrush;
         Pen emptyBorderPen;
@@ -518,5 +546,93 @@ public class BlockProgressBackground : Control
             byte b = (byte)(pal.Stop1.B + (pal.Stop2.B - pal.Stop1.B) * k);
             return Color.FromRgb(r, g, b);
         }
+    }
+
+    private void RenderFailedArtwork(DrawingContext context, Rect bounds, bool isLight)
+    {
+        // 1. Subtle glowing crimson ambient background
+        Color bgStart = isLight ? Color.FromArgb(20, 239, 68, 68) : Color.FromArgb(32, 220, 38, 38);
+        Color bgEnd = isLight ? Color.FromArgb(8, 245, 158, 11) : Color.FromArgb(14, 15, 23, 42);
+        var bgBrush = new LinearGradientBrush
+        {
+            StartPoint = new RelativePoint(0, 0, RelativeUnit.Relative),
+            EndPoint = new RelativePoint(1, 1, RelativeUnit.Relative),
+            GradientStops = new GradientStops
+            {
+                new GradientStop(bgStart, 0.0),
+                new GradientStop(bgEnd, 1.0)
+            }
+        };
+        context.FillRectangle(bgBrush, bounds, 6);
+
+        // 2. Abstract isometric geometric grid & contour ribbons
+        var gridPen = new Pen(new SolidColorBrush(isLight ? Color.FromArgb(18, 239, 68, 68) : Color.FromArgb(24, 248, 113, 113)), 0.75);
+        var accentPen = new Pen(new SolidColorBrush(isLight ? Color.FromArgb(35, 245, 158, 11) : Color.FromArgb(45, 245, 158, 11)), 1.0);
+        var emberPen = new Pen(new SolidColorBrush(isLight ? Color.FromArgb(45, 239, 68, 68) : Color.FromArgb(60, 239, 68, 68)), 1.25);
+
+        // Draw abstract isometric diagonal grid waves
+        double spacing = 18.0;
+        for (double x = -bounds.Height; x < bounds.Width + bounds.Height; x += spacing)
+        {
+            context.DrawLine(gridPen, new Point(x, bounds.Height), new Point(x + bounds.Height * 0.7, 0));
+        }
+
+        // Draw flowing abstract sinus contour wave ribbons across the card
+        var waveGeometry = new StreamGeometry();
+        using (var ctx = waveGeometry.Open())
+        {
+            ctx.BeginFigure(new Point(0, bounds.Height * 0.7), false);
+            for (double wx = 0; wx <= bounds.Width; wx += 20)
+            {
+                double wy = bounds.Height * 0.7 + Math.Sin((wx / bounds.Width) * Math.PI * 3.0 + 0.5) * (bounds.Height * 0.22);
+                ctx.LineTo(new Point(wx, wy));
+            }
+        }
+        context.DrawGeometry(null, accentPen, waveGeometry);
+
+        var waveGeometry2 = new StreamGeometry();
+        using (var ctx2 = waveGeometry2.Open())
+        {
+            ctx2.BeginFigure(new Point(0, bounds.Height * 0.4), false);
+            for (double wx = 0; wx <= bounds.Width; wx += 20)
+            {
+                double wy = bounds.Height * 0.4 + Math.Cos((wx / bounds.Width) * Math.PI * 2.5 + 1.2) * (bounds.Height * 0.28);
+                ctx2.LineTo(new Point(wx, wy));
+            }
+        }
+        context.DrawGeometry(null, emberPen, waveGeometry2);
+
+        // 3. Subtle floating geometric ember diamond pips
+        int diamondCount = Math.Max(2, (int)(bounds.Width / 80));
+        var diamondBrush = new SolidColorBrush(isLight ? Color.FromArgb(40, 239, 68, 68) : Color.FromArgb(50, 239, 68, 68));
+        for (int i = 0; i < diamondCount; i++)
+        {
+            double dx = 30 + i * (bounds.Width / diamondCount) + Math.Sin(i * 1.7) * 15;
+            double dy = bounds.Height * 0.35 + Math.Cos(i * 2.1) * (bounds.Height * 0.25);
+            
+            var diamondGeom = new StreamGeometry();
+            using (var dctx = diamondGeom.Open())
+            {
+                dctx.BeginFigure(new Point(dx, dy - 4), true);
+                dctx.LineTo(new Point(dx + 4, dy));
+                dctx.LineTo(new Point(dx, dy + 4));
+                dctx.LineTo(new Point(dx - 4, dy));
+            }
+            context.DrawGeometry(diamondBrush, null, diamondGeom);
+        }
+
+        // 4. Subtle glowing bottom hazard ribbon bar
+        var hazardBrush = new LinearGradientBrush
+        {
+            StartPoint = new RelativePoint(0, 0, RelativeUnit.Relative),
+            EndPoint = new RelativePoint(1, 0, RelativeUnit.Relative),
+            GradientStops = new GradientStops
+            {
+                new GradientStop(Color.FromArgb(90, 239, 68, 68), 0.0),
+                new GradientStop(Color.FromArgb(70, 245, 158, 11), 0.5),
+                new GradientStop(Color.FromArgb(90, 239, 68, 68), 1.0)
+            }
+        };
+        context.FillRectangle(hazardBrush, new Rect(0, bounds.Height - 2, bounds.Width, 2));
     }
 }

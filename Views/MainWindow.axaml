@@ -355,6 +355,8 @@
                                                 IsConnecting="{Binding IsConnecting}"
                                                 IsIndeterminate="{Binding IsIndeterminate}"
                                                 IsCompleted="{Binding IsCompleted}"
+                                                IsFailed="{Binding IsFailed}"
+                                                ErrorMessage="{Binding ErrorMessage}"
                                                 PaletteIndex="{Binding PaletteIndex}"
                                                 Segments="{Binding Segments}"
                                                 HorizontalAlignment="Stretch"
@@ -364,7 +366,7 @@
 
                                             <!-- Foreground Download Card Content -->
                                             <Grid RowDefinitions="Auto, Auto, Auto">
-                                                <!-- Top Row: File Name & Size -->
+                                                <!-- Top Row: File Name, Scenario Badge & Size -->
                                                 <Grid Grid.Row="0" ColumnDefinitions="*, Auto" Margin="0,0,0,6">
                                                     <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
                                                         <Ellipse Width="6" Height="6" Fill="{DynamicResource AccentBrush}" VerticalAlignment="Center" IsVisible="{Binding IsActive}" Classes="pulse-dot" />
@@ -372,6 +374,20 @@
                                                         <!-- Thread Badge -->
                                                         <Border IsVisible="{Binding Segments.Count}" Background="{DynamicResource AccentSubtleBrush}" CornerRadius="4" Padding="5,1" Margin="4,0,0,0">
                                                             <TextBlock Text="{Binding Segments.Count, StringFormat='{}{0} Threads'}" FontSize="9" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" />
+                                                        </Border>
+                                                        <!-- Failure Scenario Diagnostic Badge -->
+                                                        <Border IsVisible="{Binding IsFailed}"
+                                                                Background="#25EF4444"
+                                                                BorderBrush="#60EF4444"
+                                                                BorderThickness="1"
+                                                                CornerRadius="4"
+                                                                Padding="6,1"
+                                                                Margin="4,0,0,0"
+                                                                ToolTip.Tip="{Binding ErrorMessage}">
+                                                            <StackPanel Orientation="Horizontal" Spacing="4">
+                                                                <TextBlock Text="{Binding ScenarioDiagnosticIcon}" FontSize="10" VerticalAlignment="Center" />
+                                                                <TextBlock Text="{Binding ScenarioDiagnosticText}" FontSize="10" FontWeight="SemiBold" Foreground="#EF4444" VerticalAlignment="Center" />
+                                                            </StackPanel>
                                                         </Border>
                                                     </StackPanel>
                                                     <TextBlock Grid.Column="1" Text="{Binding FormattedSize}" MinWidth="110" TextAlignment="Right" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center" Margin="8,0,0,0" />
@@ -429,6 +445,20 @@
 
                                                     <!-- Action Buttons -->
                                                     <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="2">
+                                                        <!-- Quick Retry Button on Error -->
+                                                        <Button Classes="primary-btn"
+                                                                IsVisible="{Binding IsFailed}"
+                                                                Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).StartDownloadCommand}"
+                                                                CommandParameter="{Binding}"
+                                                                ToolTip.Tip="Retry Connection"
+                                                                Padding="7,3"
+                                                                Margin="0,0,4,0">
+                                                            <StackPanel Orientation="Horizontal" Spacing="4">
+                                                                <PathIcon Width="9" Height="9" Foreground="#FFFFFF" Data="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z" />
+                                                                <TextBlock Text="Retry" FontSize="10" FontWeight="Bold" />
+                                                            </StackPanel>
+                                                        </Button>
+
                                                         <!-- Inspector / Details Button -->
                                                         <Button Classes="ghost-btn"
                                                                 Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).OpenInspectorCommand}"

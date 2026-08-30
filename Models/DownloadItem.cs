@@ -203,6 +203,80 @@ public partial class DownloadItem : ObservableObject
     [JsonIgnore]
     public bool IsCompleted => Status == DownloadStatus.Completed;
 
+    [JsonIgnore]
+    public bool IsFailed => Status == DownloadStatus.Failed;
+
+    [JsonIgnore]
+    public string ScenarioDiagnosticText
+    {
+        get
+        {
+            if (Status != DownloadStatus.Failed) return string.Empty;
+            var err = ErrorMessage ?? string.Empty;
+            if (err.Contains("403") || err.Contains("Cloudflare", StringComparison.OrdinalIgnoreCase))
+                return "Cloudflare Bot Challenge / Access Denied (HTTP 403)";
+            if (err.Contains("401") || err.Contains("Unauthorized", StringComparison.OrdinalIgnoreCase))
+                return "Authentication Required / Login Protected (HTTP 401)";
+            if (err.Contains("404") || err.Contains("Not Found", StringComparison.OrdinalIgnoreCase))
+                return "File Not Found on Remote Server (HTTP 404)";
+            if (err.Contains("429") || err.Contains("Too Many", StringComparison.OrdinalIgnoreCase))
+                return "Server Rate Limited / Slowdown Required (HTTP 429)";
+            if (err.Contains("500") || err.Contains("502") || err.Contains("503") || err.Contains("504"))
+                return "Remote Server Internal / Gateway Error";
+            if (err.Contains("timeout", StringComparison.OrdinalIgnoreCase) || err.Contains("timed out", StringComparison.OrdinalIgnoreCase))
+                return "Network Connection Timed Out";
+            if (err.Contains("name resolution", StringComparison.OrdinalIgnoreCase) || err.Contains("host", StringComparison.OrdinalIgnoreCase))
+                return "DNS Resolution / Host Unreachable";
+            if (err.Contains("disk", StringComparison.OrdinalIgnoreCase) || err.Contains("space", StringComparison.OrdinalIgnoreCase))
+                return "Insufficient Local Storage Space";
+            if (err.Contains("denied", StringComparison.OrdinalIgnoreCase) || err.Contains("access", StringComparison.OrdinalIgnoreCase))
+                return "Local File Access / Permission Denied";
+            return !string.IsNullOrWhiteSpace(err) ? err : "Download Failed (Click Retry to Reconnect)";
+        }
+    }
+
+    [JsonIgnore]
+    public string ScenarioDiagnosticIcon
+    {
+        get
+        {
+            if (Status != DownloadStatus.Failed) return string.Empty;
+            var err = ErrorMessage ?? string.Empty;
+            if (err.Contains("403") || err.Contains("Cloudflare", StringComparison.OrdinalIgnoreCase))
+                return "🛡️";
+            if (err.Contains("401"))
+                return "🔒";
+            if (err.Contains("404"))
+                return "🔍";
+            if (err.Contains("429"))
+                return "⏳";
+            if (err.Contains("timeout", StringComparison.OrdinalIgnoreCase))
+                return "⏱️";
+            if (err.Contains("DNS", StringComparison.OrdinalIgnoreCase) || err.Contains("resolution", StringComparison.OrdinalIgnoreCase))
+                return "🌐";
+            return "⚠️";
+        }
+    }
+
+    partial void OnStatusChanged(DownloadStatus value)
+    {
+        OnPropertyChanged(nameof(StatusDisplayText));
+        OnPropertyChanged(nameof(IsActive));
+        OnPropertyChanged(nameof(IsConnecting));
+        OnPropertyChanged(nameof(IsCompleted));
+        OnPropertyChanged(nameof(IsFailed));
+        OnPropertyChanged(nameof(CanPause));
+        OnPropertyChanged(nameof(CanResume));
+        OnPropertyChanged(nameof(ScenarioDiagnosticText));
+        OnPropertyChanged(nameof(ScenarioDiagnosticIcon));
+    }
+
+    partial void OnErrorMessageChanged(string value)
+    {
+        OnPropertyChanged(nameof(ScenarioDiagnosticText));
+        OnPropertyChanged(nameof(ScenarioDiagnosticIcon));
+    }
+
     public void UpdateProgressMetrics(long downloaded, long total, double progressPct, double smoothedSpeed, bool updateSpeedDisplay)
     {
         DownloadedBytes = downloaded;
