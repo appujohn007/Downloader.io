@@ -703,8 +703,8 @@ public class BlockProgressBackground : Control
         }
 
         // 5. Draw Scenario-Specific Background Symbol Watermark (Positioned behind the right quadrant)
-        Point symbolCenter = new Point(Math.Max(120, bounds.Width - 110), bounds.Height * 0.5);
-        double symbolScale = Math.Clamp(bounds.Height / 64.0, 0.7, 1.05);
+        Point symbolCenter = new Point(Math.Max(120, bounds.Width - 85), bounds.Height * 0.48);
+        double symbolScale = Math.Clamp(bounds.Height / 62.0, 0.75, 1.05);
 
         switch (scenario)
         {

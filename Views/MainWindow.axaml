@@ -345,10 +345,10 @@
                                 <DataTemplate DataType="models:DownloadItem">
                                     <Border Classes="download-card"
                                             Margin="0,0,0,8"
-                                            Padding="14,10"
+                                            Padding="0"
                                             ClipToBounds="True">
                                         <Grid>
-                                            <!-- Live Reactive Block Progress Grid Background with Thread-Relative Matrix Positioning -->
+                                            <!-- Live Reactive Block Progress Grid Background: covers 100% of entire card surface seamlessly -->
                                             <controls:BlockProgressBackground
                                                 Progress="{Binding ProgressPercentage}"
                                                 IsActive="{Binding IsActive}"
@@ -362,11 +362,10 @@
                                                 Segments="{Binding Segments}"
                                                 HorizontalAlignment="Stretch"
                                                 VerticalAlignment="Stretch"
-                                                Margin="-14,-10"
                                                 IsHitTestVisible="False" />
 
                                             <!-- Foreground Download Card Content -->
-                                            <Grid RowDefinitions="Auto, Auto, Auto">
+                                            <Grid RowDefinitions="Auto, Auto, Auto" Margin="14,10">
                                                 <!-- Top Row: File Name, Scenario Badge & Size -->
                                                 <Grid Grid.Row="0" ColumnDefinitions="*, Auto" Margin="0,0,0,6">
                                                     <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
